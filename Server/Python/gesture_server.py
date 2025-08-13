@@ -17,6 +17,8 @@ import signal
 import sys
 from concurrent.futures import ThreadPoolExecutor
 import yaml
+import numpy as np
+from sklearn.linear_model import LinearRegression
 
 # High-performance event loop
 try:
@@ -176,12 +178,73 @@ class SystemController:
         return self.pyautogui.size()
 
 
+class TrajectoryPredictor:
+    """Predicts future cursor positions based on recent history using a simple ML model."""
+    def __init__(self, history_len: int = 10, retrain_interval: int = 30):
+        self.history_len = history_len
+        self.model = LinearRegression()
+        self.retrain_interval = retrain_interval
+        self.train_counter = 0
+        self.is_trained = False
+        self.last_known_dt = 0.01  # Start with a sensible default
+
+    def train(self, history: List[tuple]):
+        """Trains the linear regression model on the position history."""
+        self.train_counter += 1
+        if self.train_counter < self.retrain_interval and self.is_trained:
+            return
+
+        if len(history) < self.history_len:
+            return
+
+        points = np.array(history[-self.history_len:])
+
+        # Features: previous position (x, y) and time delta (dt)
+        # Target: current position (x, y)
+        X = []
+        y = []
+        for i in range(1, len(points)):
+            p_prev = points[i-1]
+            p_curr = points[i]
+            dt = p_curr[2] - p_prev[2]
+            if dt > 1e-6:
+                X.append([p_prev[0], p_prev[1], dt])
+                y.append([p_curr[0], p_curr[1]])
+
+        if not X:
+            return
+
+        self.model.fit(X, y)
+        self.is_trained = True
+        self.train_counter = 0
+        logger.info("🤖 Trajectory predictor model retrained.")
+
+    def predict(self, history: List[tuple]) -> Optional[List[int]]:
+        """Predicts the next position."""
+        if not self.is_trained or len(history) < 2:
+            return None
+
+        p_last = history[-1]
+        p_prev = history[-2]
+
+        dt = p_last[2] - p_prev[2]
+        if dt <= 1e-6:
+            dt = self.last_known_dt  # Use last known good dt
+        else:
+            self.last_known_dt = dt
+
+        # Predict based on the last known position and time delta
+        prediction = self.model.predict([[p_last[0], p_last[1], dt]])
+        return [int(prediction[0][0]), int(prediction[0][1])]
+
+
 class GestureExecutor:
     """Fast gesture executor with prediction and command queuing."""
     def __init__(self, config: ServerConfig, performance_monitor: PerformanceMonitor, controller: SystemController):
         self.config = config
         self.performance_monitor = performance_monitor
         self.controller = controller
+        self.predictor = TrajectoryPredictor()
 
         self.screen_width, self.screen_height = self.controller.size()
         self.last_position = [0, 0]
@@ -190,6 +253,8 @@ class GestureExecutor:
         self.worker_task = asyncio.create_task(self._command_worker())
 
         logger.info(f"🖥️ Screen resolution: {self.screen_width}x{self.screen_height}")
+        if self.config.enable_prediction:
+            logger.info("🤖 Trajectory prediction enabled.")
 
     async def submit_command(self, command: GestureCommand):
         """Submits a command to the execution queue."""
@@ -217,7 +282,6 @@ class GestureExecutor:
 
     async def _execute_command_internal(self, command: GestureCommand):
         # Protocol definition: client MUST send normalized coordinates (0.0 to 1.0).
-        # This is more robust than assuming a fixed client resolution.
         abs_x = int(command.position[0] * self.screen_width)
         abs_y = int(command.position[1] * self.screen_height)
 
@@ -273,30 +337,24 @@ class GestureExecutor:
 
     def _update_position_history(self, x: int, y: int):
         self.position_history.append((x, y, time.time()))
-        if len(self.position_history) > 10:
+        if len(self.position_history) > self.predictor.history_len:
             self.position_history.pop(0)
 
-    def _predict_next_position(self, x: int, y: int):
-        if len(self.position_history) < 2:
-            return x, y
+        if self.config.enable_prediction:
+            self.predictor.train(self.position_history)
 
-        p0 = self.position_history[-2]
-        p1 = self.position_history[-1]
+    def _predict_next_position(self, x: int, y: int) -> tuple[int, int]:
+        """Predicts the next cursor position using the ML model."""
+        predicted_pos = self.predictor.predict(self.position_history)
+        if predicted_pos:
+            px, py = predicted_pos
+            # Clamp prediction to screen bounds for safety
+            px = max(0, min(self.screen_width, px))
+            py = max(0, min(self.screen_height, py))
+            return px, py
 
-        dt = p1[2] - p0[2]
-        if dt <= 1e-6:  # Avoid division by zero
-            return x, y
-
-        vx = (p1[0] - p0[0]) / dt
-        vy = (p1[1] - p0[1]) / dt
-
-        prediction_time = 0.05  # Simple extrapolation 50ms into the future
-        px = int(x + vx * prediction_time)
-        py = int(y + vy * prediction_time)
-
-        px = max(0, min(self.screen_width, px))
-        py = max(0, min(self.screen_height, py))
-        return px, py
+        # Fallback to current position if prediction is not available
+        return x, y
 
 
 from web_server import WebServer
