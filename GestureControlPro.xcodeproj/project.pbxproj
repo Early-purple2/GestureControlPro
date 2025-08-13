@@ -1,1 +1,784 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 70;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		BA1234567890ABCD /* GestureControlProApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABCE /* GestureControlProApp.swift */; };
+		BA1234567890ABCF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABD0 /* ContentView.swift */; };
+		BA1234567890ABD1 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABD2 /* AppDelegate.swift */; };
+		BA1234567890ABD3 /* GestureManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABD4 /* GestureManager.swift */; };
+		BA1234567890ABD5 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABD6 /* NetworkService.swift */; };
+		BA1234567890ABD7 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABD8 /* Models.swift */; };
+		BA1234567890ABD9 /* CameraService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABDA /* CameraService.swift */; };
+		BA1234567890ABDB /* MetalService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABDC /* MetalService.swift */; };
+		BA1234567890ABDD /* MLPredictionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABDE /* MLPredictionService.swift */; };
+		BA1234567890ABDF /* PerformanceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABE0 /* PerformanceManager.swift */; };
+		BA1234567890ABE1 /* ConfigurationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABE2 /* ConfigurationManager.swift */; };
+		BA1234567890ABE3 /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABE4 /* CameraView.swift */; };
+		BA1234567890ABE5 /* GestureVisualizationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABE6 /* GestureVisualizationView.swift */; };
+		BA1234567890ABE7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABE8 /* SettingsView.swift */; };
+		BA1234567890ABE9 /* CalibrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABEA /* CalibrationView.swift */; };
+		BA1234567890ABEB /* StatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABEC /* StatusView.swift */; };
+		BA1234567890ABED /* HandTrackingOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABEE /* HandTrackingOverlay.swift */; };
+		BA1234567890ABEF /* PerformanceIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABF0 /* PerformanceIndicator.swift */; };
+		BA1234567890ABF1 /* GestureButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABF2 /* GestureButton.swift */; };
+		BA1234567890ABF3 /* HandPoseProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABF4 /* HandPoseProcessor.swift */; };
+		BA1234567890ABF5 /* GestureClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABF6 /* GestureClassifier.swift */; };
+		BA1234567890ABF7 /* PredictiveTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABF8 /* PredictiveTracker.swift */; };
+		BA1234567890ABF9 /* HandTrackingShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABFA /* HandTrackingShaders.metal */; };
+		BA1234567890ABFB /* MLInferenceShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABFC /* MLInferenceShaders.metal */; };
+		BA1234567890ABFD /* PostProcessingShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890ABFE /* PostProcessingShaders.metal */; };
+		BA1234567890ABFF /* GestureProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890AC00 /* GestureProtocol.swift */; };
+		BA1234567890AC01 /* StreamingProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890AC02 /* StreamingProtocol.swift */; };
+		BA1234567890AC03 /* PCControlClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890AC04 /* PCControlClient.swift */; };
+		BA1234567890AC05 /* WebSocketClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890AC06 /* WebSocketClient.swift */; };
+		BA1234567890AC07 /* UDPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890AC08 /* UDPClient.swift */; };
+		BA1234567890AC09 /* CGPoint+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890AC0A /* CGPoint+Extensions.swift */; };
+		BA1234567890AC0B /* VNHumanHandPoseObservation+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890AC0C /* VNHumanHandPoseObservation+Extensions.swift */; };
+		BA1234567890AC0D /* Array+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890AC0E /* Array+Extensions.swift */; };
+		BA1234567890AC0F /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890AC10 /* Logger.swift */; };
+		BA1234567890AC11 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890AC12 /* Constants.swift */; };
+		BA1234567890AC13 /* GestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890AC14 /* GestureRecognizer.swift */; };
+		BA1234567890AC15 /* PerformanceProfiler.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1234567890AC16 /* PerformanceProfiler.swift */; };
+		BA1234567890AC17 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BA1234567890AC18 /* Assets.xcassets */; };
+		BA1234567890AC19 /* HandGestureClassifier.mlmodel in Resources */ = {isa = PBXBuildFile; fileRef = BA1234567890AC1A /* HandGestureClassifier.mlmodel */; };
+		BA1234567890AC1B /* PredictiveTracker.mlmodel in Resources */ = {isa = PBXBuildFile; fileRef = BA1234567890AC1C /* PredictiveTracker.mlmodel */; };
+		BA1234567890AC1D /* GestureConfig.plist in Resources */ = {isa = PBXBuildFile; fileRef = BA1234567890AC1E /* GestureConfig.plist */; };
+		BA1234567890AC1F /* NetworkConfig.plist in Resources */ = {isa = PBXBuildFile; fileRef = BA1234567890AC20 /* NetworkConfig.plist */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		BA1234567890AC21 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BA1234567890AC22 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BA1234567890AC23;
+			remoteInfo = GestureControlPro;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		BA1234567890AC24 /* GestureControlPro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GestureControlPro.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BA1234567890ABCE /* GestureControlProApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureControlProApp.swift; sourceTree = "<group>"; };
+		BA1234567890ABD0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		BA1234567890ABD2 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		BA1234567890ABD4 /* GestureManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureManager.swift; sourceTree = "<group>"; };
+		BA1234567890ABD6 /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkService.swift; sourceTree = "<group>"; };
+		BA1234567890ABD8 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		BA1234567890ABDA /* CameraService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraService.swift; sourceTree = "<group>"; };
+		BA1234567890ABDC /* MetalService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalService.swift; sourceTree = "<group>"; };
+		BA1234567890ABDE /* MLPredictionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLPredictionService.swift; sourceTree = "<group>"; };
+		BA1234567890ABE0 /* PerformanceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceManager.swift; sourceTree = "<group>"; };
+		BA1234567890ABE2 /* ConfigurationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationManager.swift; sourceTree = "<group>"; };
+		BA1234567890ABE4 /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
+		BA1234567890ABE6 /* GestureVisualizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureVisualizationView.swift; sourceTree = "<group>"; };
+		BA1234567890ABE8 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		BA1234567890ABEA /* CalibrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationView.swift; sourceTree = "<group>"; };
+		BA1234567890ABEC /* StatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusView.swift; sourceTree = "<group>"; };
+		BA1234567890ABEE /* HandTrackingOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandTrackingOverlay.swift; sourceTree = "<group>"; };
+		BA1234567890ABF0 /* PerformanceIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceIndicator.swift; sourceTree = "<group>"; };
+		BA1234567890ABF2 /* GestureButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureButton.swift; sourceTree = "<group>"; };
+		BA1234567890ABF4 /* HandPoseProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandPoseProcessor.swift; sourceTree = "<group>"; };
+		BA1234567890ABF6 /* GestureClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureClassifier.swift; sourceTree = "<group>"; };
+		BA1234567890ABF8 /* PredictiveTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PredictiveTracker.swift; sourceTree = "<group>"; };
+		BA1234567890ABFA /* HandTrackingShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = HandTrackingShaders.metal; sourceTree = "<group>"; };
+		BA1234567890ABFC /* MLInferenceShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = MLInferenceShaders.metal; sourceTree = "<group>"; };
+		BA1234567890ABFE /* PostProcessingShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = PostProcessingShaders.metal; sourceTree = "<group>"; };
+		BA1234567890AC00 /* GestureProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureProtocol.swift; sourceTree = "<group>"; };
+		BA1234567890AC02 /* StreamingProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingProtocol.swift; sourceTree = "<group>"; };
+		BA1234567890AC04 /* PCControlClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PCControlClient.swift; sourceTree = "<group>"; };
+		BA1234567890AC06 /* WebSocketClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSocketClient.swift; sourceTree = "<group>"; };
+		BA1234567890AC08 /* UDPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UDPClient.swift; sourceTree = "<group>"; };
+		BA1234567890AC0A /* CGPoint+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CGPoint+Extensions.swift"; sourceTree = "<group>"; };
+		BA1234567890AC0C /* VNHumanHandPoseObservation+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "VNHumanHandPoseObservation+Extensions.swift"; sourceTree = "<group>"; };
+		BA1234567890AC0E /* Array+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Array+Extensions.swift"; sourceTree = "<group>"; };
+		BA1234567890AC10 /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
+		BA1234567890AC12 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		BA1234567890AC14 /* GestureRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureRecognizer.swift; sourceTree = "<group>"; };
+		BA1234567890AC16 /* PerformanceProfiler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceProfiler.swift; sourceTree = "<group>"; };
+		BA1234567890AC18 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		BA1234567890AC1A /* HandGestureClassifier.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = HandGestureClassifier.mlmodel; sourceTree = "<group>"; };
+		BA1234567890AC1C /* PredictiveTracker.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = PredictiveTracker.mlmodel; sourceTree = "<group>"; };
+		BA1234567890AC1E /* GestureConfig.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = GestureConfig.plist; sourceTree = "<group>"; };
+		BA1234567890AC20 /* NetworkConfig.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = NetworkConfig.plist; sourceTree = "<group>"; };
+		BA1234567890AC25 /* GestureControlProTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GestureControlProTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		BA1234567890AC26 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		BA1234567890AC27 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BA1234567890AC28 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		BA1234567890AC29 = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890AC2A /* GestureControlPro */,
+				BA1234567890AC2B /* GestureControlProTests */,
+				BA1234567890AC2C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		BA1234567890AC2A /* GestureControlPro */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890AC2D /* App */,
+				BA1234567890AC2E /* Core */,
+				BA1234567890AC2F /* UI */,
+				BA1234567890AC30 /* Vision */,
+				BA1234567890AC31 /* Network */,
+				BA1234567890AC32 /* Extensions */,
+				BA1234567890AC33 /* Utils */,
+				BA1234567890AC34 /* Resources */,
+				BA1234567890AC26 /* Info.plist */,
+			);
+			path = GestureControlPro;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC2B /* GestureControlProTests */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = GestureControlProTests;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC2C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890AC24 /* GestureControlPro.app */,
+				BA1234567890AC25 /* GestureControlProTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC2D /* App */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890ABCE /* GestureControlProApp.swift */,
+				BA1234567890ABD0 /* ContentView.swift */,
+				BA1234567890ABD2 /* AppDelegate.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC2E /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890AC35 /* Models */,
+				BA1234567890AC36 /* Services */,
+				BA1234567890AC37 /* Managers */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC2F /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890AC38 /* Views */,
+				BA1234567890AC39 /* Components */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC30 /* Vision */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890AC3A /* Processors */,
+				BA1234567890AC3B /* MetalShaders */,
+			);
+			path = Vision;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC31 /* Network */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890AC3C /* Protocols */,
+				BA1234567890AC3D /* Clients */,
+			);
+			path = Network;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC32 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890AC0A /* CGPoint+Extensions.swift */,
+				BA1234567890AC0C /* VNHumanHandPoseObservation+Extensions.swift */,
+				BA1234567890AC0E /* Array+Extensions.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC33 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890AC10 /* Logger.swift */,
+				BA1234567890AC12 /* Constants.swift */,
+				BA1234567890AC14 /* GestureRecognizer.swift */,
+				BA1234567890AC16 /* PerformanceProfiler.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC34 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890AC3E /* Models */,
+				BA1234567890AC3F /* Configurations */,
+				BA1234567890AC18 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC35 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890ABD8 /* Models.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC36 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890ABD6 /* NetworkService.swift */,
+				BA1234567890ABDA /* CameraService.swift */,
+				BA1234567890ABDC /* MetalService.swift */,
+				BA1234567890ABDE /* MLPredictionService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC37 /* Managers */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890ABD4 /* GestureManager.swift */,
+				BA1234567890ABE0 /* PerformanceManager.swift */,
+				BA1234567890ABE2 /* ConfigurationManager.swift */,
+			);
+			path = Managers;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC38 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890ABE4 /* CameraView.swift */,
+				BA1234567890ABE6 /* GestureVisualizationView.swift */,
+				BA1234567890ABE8 /* SettingsView.swift */,
+				BA1234567890ABEA /* CalibrationView.swift */,
+				BA1234567890ABEC /* StatusView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC39 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890ABEE /* HandTrackingOverlay.swift */,
+				BA1234567890ABF0 /* PerformanceIndicator.swift */,
+				BA1234567890ABF2 /* GestureButton.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC3A /* Processors */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890ABF4 /* HandPoseProcessor.swift */,
+				BA1234567890ABF6 /* GestureClassifier.swift */,
+				BA1234567890ABF8 /* PredictiveTracker.swift */,
+			);
+			path = Processors;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC3B /* MetalShaders */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890ABFA /* HandTrackingShaders.metal */,
+				BA1234567890ABFC /* MLInferenceShaders.metal */,
+				BA1234567890ABFE /* PostProcessingShaders.metal */,
+			);
+			path = MetalShaders;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC3C /* Protocols */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890AC00 /* GestureProtocol.swift */,
+				BA1234567890AC02 /* StreamingProtocol.swift */,
+			);
+			path = Protocols;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC3D /* Clients */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890AC04 /* PCControlClient.swift */,
+				BA1234567890AC06 /* WebSocketClient.swift */,
+				BA1234567890AC08 /* UDPClient.swift */,
+			);
+			path = Clients;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC3E /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890AC1A /* HandGestureClassifier.mlmodel */,
+				BA1234567890AC1C /* PredictiveTracker.mlmodel */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		BA1234567890AC3F /* Configurations */ = {
+			isa = PBXGroup;
+			children = (
+				BA1234567890AC1E /* GestureConfig.plist */,
+				BA1234567890AC20 /* NetworkConfig.plist */,
+			);
+			path = Configurations;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		BA1234567890AC23 /* GestureControlPro */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BA1234567890AC40 /* Build configuration list for PBXNativeTarget "GestureControlPro" */;
+			buildPhases = (
+				BA1234567890AC41 /* Sources */,
+				BA1234567890AC27 /* Frameworks */,
+				BA1234567890AC42 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GestureControlPro;
+			productName = GestureControlPro;
+			productReference = BA1234567890AC24 /* GestureControlPro.app */;
+			productType = "com.apple.product-type.application";
+		};
+		BA1234567890AC43 /* GestureControlProTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BA1234567890AC44 /* Build configuration list for PBXNativeTarget "GestureControlProTests" */;
+			buildPhases = (
+				BA1234567890AC45 /* Sources */,
+				BA1234567890AC28 /* Frameworks */,
+				BA1234567890AC46 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				BA1234567890AC47 /* PBXTargetDependency */,
+			);
+			name = GestureControlProTests;
+			productName = GestureControlProTests;
+			productReference = BA1234567890AC25 /* GestureControlProTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BA1234567890AC22 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					BA1234567890AC23 = {
+						CreatedOnToolsVersion = 16.0;
+						DevelopmentTeam = ABCDEFGHIJ;
+						ProvisioningStyle = Automatic;
+					};
+					BA1234567890AC43 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = BA1234567890AC23;
+					};
+				};
+			};
+			buildConfigurationList = BA1234567890AC48 /* Build configuration list for PBXProject "GestureControlPro" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = BA1234567890AC29;
+			productRefGroup = BA1234567890AC2C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				BA1234567890AC23 /* GestureControlPro */,
+				BA1234567890AC43 /* GestureControlProTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		BA1234567890AC42 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BA1234567890AC17 /* Assets.xcassets in Resources */,
+				BA1234567890AC19 /* HandGestureClassifier.mlmodel in Resources */,
+				BA1234567890AC1B /* PredictiveTracker.mlmodel in Resources */,
+				BA1234567890AC1D /* GestureConfig.plist in Resources */,
+				BA1234567890AC1F /* NetworkConfig.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BA1234567890AC46 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		BA1234567890AC41 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BA1234567890ABCD /* GestureControlProApp.swift in Sources */,
+				BA1234567890ABCF /* ContentView.swift in Sources */,
+				BA1234567890ABD1 /* AppDelegate.swift in Sources */,
+				BA1234567890ABD3 /* GestureManager.swift in Sources */,
+				BA1234567890ABD5 /* NetworkService.swift in Sources */,
+				BA1234567890ABD7 /* Models.swift in Sources */,
+				BA1234567890ABD9 /* CameraService.swift in Sources */,
+				BA1234567890ABDB /* MetalService.swift in Sources */,
+				BA1234567890ABDD /* MLPredictionService.swift in Sources */,
+				BA1234567890ABDF /* PerformanceManager.swift in Sources */,
+				BA1234567890ABE1 /* ConfigurationManager.swift in Sources */,
+				BA1234567890ABE3 /* CameraView.swift in Sources */,
+				BA1234567890ABE5 /* GestureVisualizationView.swift in Sources */,
+				BA1234567890ABE7 /* SettingsView.swift in Sources */,
+				BA1234567890ABE9 /* CalibrationView.swift in Sources */,
+				BA1234567890ABEB /* StatusView.swift in Sources */,
+				BA1234567890ABED /* HandTrackingOverlay.swift in Sources */,
+				BA1234567890ABEF /* PerformanceIndicator.swift in Sources */,
+				BA1234567890ABF1 /* GestureButton.swift in Sources */,
+				BA1234567890ABF3 /* HandPoseProcessor.swift in Sources */,
+				BA1234567890ABF5 /* GestureClassifier.swift in Sources */,
+				BA1234567890ABF7 /* PredictiveTracker.swift in Sources */,
+				BA1234567890ABF9 /* HandTrackingShaders.metal in Sources */,
+				BA1234567890ABFB /* MLInferenceShaders.metal in Sources */,
+				BA1234567890ABFD /* PostProcessingShaders.metal in Sources */,
+				BA1234567890ABFF /* GestureProtocol.swift in Sources */,
+				BA1234567890AC01 /* StreamingProtocol.swift in Sources */,
+				BA1234567890AC03 /* PCControlClient.swift in Sources */,
+				BA1234567890AC05 /* WebSocketClient.swift in Sources */,
+				BA1234567890AC07 /* UDPClient.swift in Sources */,
+				BA1234567890AC09 /* CGPoint+Extensions.swift in Sources */,
+				BA1234567890AC0B /* VNHumanHandPoseObservation+Extensions.swift in Sources */,
+				BA1234567890AC0D /* Array+Extensions.swift in Sources */,
+				BA1234567890AC0F /* Logger.swift in Sources */,
+				BA1234567890AC11 /* Constants.swift in Sources */,
+				BA1234567890AC13 /* GestureRecognizer.swift in Sources */,
+				BA1234567890AC15 /* PerformanceProfiler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BA1234567890AC45 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		BA1234567890AC47 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BA1234567890AC23 /* GestureControlPro */;
+			targetProxy = BA1234567890AC21 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		BA1234567890AC49 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_CONCISE_MAGIC_FILE = YES;
+				SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY = YES;
+				SWIFT_UPCOMING_FEATURE_FORWARD_TRAILING_CLOSURES = YES;
+				SWIFT_UPCOMING_FEATURE_GLOBAL_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_IMPLICIT_OPEN_EXISTENTIALS = YES;
+				SWIFT_UPCOMING_FEATURE_ISOLATED_DEFAULT_VALUES = YES;
+				SWIFT_UPCOMING_FEATURE_REGION_BASED_ISOLATION = YES;
+			};
+			name = Debug;
+		};
+		BA1234567890AC4A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_UPCOMING_FEATURE_CONCISE_MAGIC_FILE = YES;
+				SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY = YES;
+				SWIFT_UPCOMING_FEATURE_FORWARD_TRAILING_CLOSURES = YES;
+				SWIFT_UPCOMING_FEATURE_GLOBAL_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_IMPLICIT_OPEN_EXISTENTIALS = YES;
+				SWIFT_UPCOMING_FEATURE_ISOLATED_DEFAULT_VALUES = YES;
+				SWIFT_UPCOMING_FEATURE_REGION_BASED_ISOLATION = YES;
+			};
+			name = Release;
+		};
+		BA1234567890AC4B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = GestureControlPro/GestureControlPro.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"GestureControlPro/Preview Content\"";
+				DEVELOPMENT_TEAM = ABCDEFGHIJ;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Cette app utilise la caméra pour détecter les gestes de la main et contrôler votre ordinateur.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Cette app peut utiliser le microphone pour des fonctionnalités avancées.";
+				INFOPLIST_KEY_CFBundleDisplayName = "GestureControl Pro";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gesturecontrolpro.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		BA1234567890AC4C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = GestureControlPro/GestureControlPro.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"GestureControlPro/Preview Content\"";
+				DEVELOPMENT_TEAM = ABCDEFGHIJ;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Cette app utilise la caméra pour détecter les gestes de la main et contrôler votre ordinateur.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Cette app peut utiliser le microphone pour des fonctionnalités avancées.";
+				INFOPLIST_KEY_CFBundleDisplayName = "GestureControl Pro";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gesturecontrolpro.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		BA1234567890AC4D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ABCDEFGHIJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gesturecontrolpro.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GestureControlPro.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GestureControlPro";
+			};
+			name = Debug;
+		};
+		BA1234567890AC4E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ABCDEFGHIJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gesturecontrolpro.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GestureControlPro.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GestureControlPro";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		BA1234567890AC40 /* Build configuration list for PBXNativeTarget "GestureControlPro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BA1234567890AC4B /* Debug */,
+				BA1234567890AC4C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BA1234567890AC44 /* Build configuration list for PBXNativeTarget "GestureControlProTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BA1234567890AC4D /* Debug */,
+				BA1234567890AC4E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BA1234567890AC48 /* Build configuration list for PBXProject "GestureControlPro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BA1234567890AC49 /* Debug */,
+				BA1234567890AC4A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = BA1234567890AC22 /* Project object */;
+}
 
