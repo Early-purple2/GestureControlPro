@@ -36,19 +36,18 @@ Application rÃ©volutionnaire de contrÃ´le gestuel utilisant les derniÃ¨res
 
 ```
 GestureControlPro/
-â”œâ”€â”€ ðŸ“± Sources/GestureControlPro/           # Application macOS/visionOS
-â”‚   â”œâ”€â”€ App/                                # Interface SwiftUI
-â”‚   â”œâ”€â”€ Core/                               # Logique mÃ©tier
-â”‚   â”œâ”€â”€ Vision/                             # DÃ©tection gestuelle
-â”‚   â”œâ”€â”€ Network/                            # Communication rÃ©seau
-â”‚   â””â”€â”€ Utils/                              # Utilitaires
-â”œâ”€â”€ ðŸ Server/Python/                       # Serveur de contrÃ´le PC
-â”‚   â”œâ”€â”€ gesture_server.py                   # Serveur principal
-â”‚   â”œâ”€â”€ gesture_executor.py                 # ExÃ©cuteur de commandes
-â”‚   â””â”€â”€ requirements.txt                    # DÃ©pendances Python
-â”œâ”€â”€ ðŸŒ Demo/                                # Application web de dÃ©mo
-â”œâ”€â”€ ðŸ“š Documentation/                       # Guide complet
-â””â”€â”€ ðŸ”§ Scripts/                            # Scripts de dÃ©ploiement
+â”œâ”€â”€ ðŸ“± Sources/GestureControlPro/           # macOS/visionOS Application
+â”‚   â”œâ”€â”€ App/                                # SwiftUI Interface
+â”‚   â”œâ”€â”€ Core/                               # Business Logic
+â”‚   â”œâ”€â”€ ...
+â”œâ”€â”€ ðŸ Server/Python/                       # PC Control Server
+â”‚   â”œâ”€â”€ gesture_server.py                   # Main server
+â”‚   â”œâ”€â”€ web_server.py                       # Web server for monitoring API
+â”‚   â”œâ”€â”€ index.html                          # Monitoring dashboard page
+â”‚   â”œâ”€â”€ requirements.txt                    # Python dependencies
+â”‚   â””â”€â”€ tests/                              # Pytest test suite
+â”œâ”€â”€ ðŸ“š Documentation/                       # Complete Guides
+â””â”€â”€ ðŸ”§ Scripts/                            # Deployment Scripts
 ```
 
 ## ðŸš€ Installation et Configuration
@@ -113,17 +112,19 @@ python gesture_server.py
 
 # Terminal 2: Application macOS
 swift run GestureControlPro
-
-# Terminal 3: Demo Web (optionnel)
-cd Demo
-python -m http.server 8000
 ```
+
+Une fois le serveur Python lancÃ©, l'interface web de monitoring est automatiquement disponible sur [http://localhost:8000](http://localhost:8000).
 
 ## âš™ï¸ Configuration AvancÃ©e
 
 ### Configuration RÃ©seau
 
-CrÃ©er `config.yaml`:
+La configuration du systÃ¨me est divisÃ©e :
+- **Serveur (PC)**: Le serveur Python utilise le fichier `Server/Python/config.yaml` pour tous ses paramÃ¨tres (rÃ©seau, performance).
+- **Client (macOS/visionOS)**: L'application Swift utilise des fichiers de configuration natifs (`.plist`) gÃ©rÃ©s directement dans Xcode.
+
+Exemple de configuration pour `config.yaml` (serveur) :
 
 ```yaml
 network:
@@ -184,12 +185,12 @@ pyautogui.PAUSE = 0.001  # 1ms de pause minimale
 
 ### Interface Web de Monitoring
 
-AccÃ©dez Ã  `http://localhost:8000` pour :
-- ðŸ“Š **MÃ©triques temps rÃ©el** (FPS, latence, prÃ©cision)
-- ðŸŽ¥ **Visualisation** des points de repÃ¨re
-- ðŸŒ **Statut rÃ©seau** et appareils connectÃ©s
-- âš™ï¸ **Configuration** en direct
-- ðŸ“ˆ **Graphiques** de performance historique
+Le serveur inclut une interface web de monitoring accessible sur **[http://localhost:8000](http://localhost:8000)**. Cette interface fournit :
+- ðŸ“Š **MÃ©triques temps rÃ©el** via une API REST (`/api/v1/metrics`).
+- ðŸŒ **Statut du serveur** (`/api/v1/status`).
+- âš™ï¸ **Configuration actuelle** (`/api/v1/config`).
+
+L'interface se connecte également au serveur WebSocket pour afficher les messages en temps réel. Pour une documentation dÃ©taillÃ©e de l'API, consultez `Documentation/API_reference.md`.
 
 ### Commandes Debug
 

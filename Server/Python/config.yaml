@@ -17,6 +17,11 @@ performance:
   command_timeout: 0.001 # in seconds
   heartbeat_interval: 1.0 # in seconds
 
+security:
+  # Secret token for authenticating clients.
+  # IMPORTANT: Change this to a long, random string in a real deployment.
+  secret_token: "DEFAULT_SECRET_TOKEN_CHANGE_ME"
+
 # Note: The following settings from the README are illustrative
 # and are not used by the current version of the server, but are kept for future compatibility.
 # gestures:
