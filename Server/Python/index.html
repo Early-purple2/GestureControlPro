@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GestureControlPro - Monitoring</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; margin: 0; padding: 20px; }
+        h1, h2 { color: #333; }
+        #container { max-width: 800px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        pre { background-color: #e9ebee; padding: 15px; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word; }
+        #status { font-weight: bold; }
+        .status-connected { color: #42b72a; }
+        .status-disconnected { color: #fa3e3e; }
+        .status-error { color: #f5a623; }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>GestureControlPro - Real-time Monitoring</h1>
+        <p>Status: <span id="status" class="status-disconnected">Connecting...</span></p>
+
+        <h2>Live Metrics (from REST API)</h2>
+        <pre id="metrics">Fetching...</pre>
+
+        <h2>Last WebSocket Message</h2>
+        <pre id="last_message">No messages received yet.</pre>
+    </div>
+
+    <script>
+        const statusEl = document.getElementById('status');
+        const metricsEl = document.getElementById('metrics');
+        const lastMessageEl = document.getElementById('last_message');
+
+        function setStatus(text, className) {
+            statusEl.textContent = text;
+            statusEl.className = 'status-' + className;
+        }
+
+        // The WebSocket port is hardcoded here. A more advanced implementation
+        // could fetch this from the config endpoint.
+        const wsPort = 8080;
+        const wsUrl = 'ws://' + window.location.hostname + ':' + wsPort + '/';
+        // This token should match the 'secret_token' in config.yaml
+        const authToken = "DEFAULT_SECRET_TOKEN_CHANGE_ME";
+
+        function connectWebSocket() {
+            console.log('Attempting to connect to WebSocket at ' + wsUrl);
+            // Pass the token as a subprotocol
+            const ws = new WebSocket(wsUrl, "token," + authToken);
+
+            ws.onopen = function() {
+                setStatus('Connected', 'connected');
+                console.log('WebSocket connection established');
+                // A more advanced dashboard could send a message to subscribe to specific data streams.
+            };
+
+            ws.onmessage = function(event) {
+                console.log('Message from server: ', event.data);
+                try {
+                    const data = JSON.parse(event.data);
+                    lastMessageEl.textContent = JSON.stringify(data, null, 2);
+                } catch (e) {
+                    lastMessageEl.textContent = event.data;
+                }
+            };
+
+            ws.onclose = function() {
+                setStatus('Disconnected', 'disconnected');
+                console.log('WebSocket connection closed. Retrying in 3 seconds...');
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            ws.onerror = function(error) {
+                setStatus('Error', 'error');
+                console.error('WebSocket Error: ', error);
+                // The onclose event will usually fire after an error, triggering a reconnect.
+            };
+        }
+
+        async function fetchMetrics() {
+            try {
+                const response = await fetch('/api/v1/metrics');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                metricsEl.textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                metricsEl.textContent = 'Error fetching metrics: ' + e.message;
+            }
+        }
+
+        // Initial calls
+        connectWebSocket();
+        setInterval(fetchMetrics, 5000);
+        fetchMetrics();
+
+    </script>
+</body>
+</html>

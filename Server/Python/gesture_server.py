@@ -1,9 +1,8 @@
-# creation par early
 #!/usr/bin/env python3
 """
-Serveur de Contrôle Gestuel Ultra-Performant
-Utilise les dernières technologies Python pour une latence minimale
-Support WebSocket, UDP, TCP avec threading optimisé
+High-Performance Gesture Control Server
+Utilizes the latest Python technologies for minimal latency.
+Supports WebSocket, UDP, and TCP with optimized threading.
 """
 
 import asyncio
@@ -11,29 +10,27 @@ import json
 import time
 import threading
 import logging
-from dataclasses import dataclass, asdict
-from typing import Dict, List, Any
+from dataclasses import dataclass
+from typing import Dict, List, Any, Optional
 from enum import Enum
 import signal
 import sys
 from concurrent.futures import ThreadPoolExecutor
 import yaml
 
-# Performant event loop
-import uvloop  # Pour performance async optimisée
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+# High-performance event loop
+try:
+    import uvloop
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+except ImportError:
+    pass
 
-# Imports pour contrôle système
-import pyautogui
+# System control imports
 import websockets
-import socket
-import struct
+from websockets.server import WebSocketServerProtocol
+from websockets.exceptions import ConnectionClosed
 
-# Configuration PyAutoGUI pour performance maximale
-pyautogui.FAILSAFE = False
-pyautogui.PAUSE = 0.001  # Latence minimale entre commandes
-
-# Configuration logging
+# Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -43,23 +40,24 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ServerConfig:
-    """Configuration du serveur avec optimisations"""
+    """Server configuration with optimizations."""
     websocket_port: int = 8080
     udp_port: int = 9090
     tcp_port: int = 7070
     host: str = "0.0.0.0"
     max_connections: int = 10
     heartbeat_interval: float = 1.0
-    command_timeout: float = 0.001  # 1ms max par commande
+    command_timeout: float = 0.001  # 1ms max per command
     buffer_size: int = 8192
     thread_pool_size: int = 4
     enable_prediction: bool = True
     gesture_smoothing: float = 0.7
     performance_logging: bool = True
+    secret_token: Optional[str] = None
 
 
 class GestureAction(Enum):
-    """Actions de geste supportées"""
+    """Supported gesture actions."""
     CLICK = "click"
     DOUBLE_CLICK = "double_click"
     DRAG = "drag"
@@ -70,151 +68,206 @@ class GestureAction(Enum):
     KEY_COMBO = "key_combo"
 
 
+@dataclass
 class GestureCommand:
-    """Commande de geste avec métadonnées performance"""
-    def __init__(self, id: str, action: str, position: List[float], timestamp: float, metadata: Dict[str, Any] = None):
-        self.id = id
-        self.action = action
-        self.position = position
-        self.timestamp = timestamp
-        self.metadata = metadata or {}
+    """Gesture command with performance metadata."""
+    id: str
+    action: str
+    position: List[float]
+    timestamp: float
+    metadata: Dict[str, Any]
 
     @classmethod
-    def from_json(cls, data: Dict) -> 'GestureCommand':
-        payload = data.get('payload', {})
-        return cls(
-            id=data.get('id', ''),
-            action=payload.get('action', ''),
-            position=payload.get('position', [0, 0]),
-            timestamp=payload.get('timestamp', time.time()),
-            metadata=payload.get('metadata', {})
-        )
+    def from_json(cls, data: Dict) -> Optional['GestureCommand']:
+        try:
+            payload = data['payload']
+            return cls(
+                id=data['id'],
+                action=payload['action'],
+                position=payload.get('position', [0, 0]),
+                timestamp=data.get('timestamp', time.time()),
+                metadata=payload.get('metadata', {})
+            )
+        except (KeyError, TypeError) as e:
+            logger.error(f"Failed to parse GestureCommand: {e}")
+            return None
 
 
 class PerformanceMonitor:
-    """Moniteur de performance en temps réel"""
+    """Real-time performance monitor."""
     def __init__(self):
         self.commands_processed = 0
         self.total_latency = 0.0
         self.max_latency = 0.0
         self.min_latency = float('inf')
         self.start_time = time.time()
-        self.lock = threading.Lock()
+        self.lock = asyncio.Lock()
 
-    def record_command(self, latency: float):
-        with self.lock:
+    async def record_command(self, latency: float):
+        async with self.lock:
             self.commands_processed += 1
             self.total_latency += latency
             self.max_latency = max(self.max_latency, latency)
             self.min_latency = min(self.min_latency, latency)
 
-    def get_stats(self) -> Dict[str, float]:
-        with self.lock:
+    async def get_stats(self) -> Dict[str, float]:
+        async with self.lock:
             if self.commands_processed == 0:
                 return {
                     'commands_per_second': 0.0,
-                    'avg_latency': 0.0,
-                    'max_latency': 0.0,
-                    'min_latency': 0.0
+                    'avg_latency_ms': 0.0,
+                    'max_latency_ms': 0.0,
+                    'min_latency_ms': 0.0
                 }
             elapsed = time.time() - self.start_time
             return {
                 'commands_per_second': self.commands_processed / elapsed,
-                'avg_latency': self.total_latency / self.commands_processed,
-                'max_latency': self.max_latency,
-                'min_latency': self.min_latency if self.min_latency != float('inf') else 0.0
+                'avg_latency_ms': (self.total_latency / self.commands_processed) * 1000,
+                'max_latency_ms': self.max_latency * 1000,
+                'min_latency_ms': (self.min_latency if self.min_latency != float('inf') else 0.0) * 1000
             }
 
 
+class SystemController:
+    """Abstracts system control actions to allow for testability."""
+    def __init__(self, thread_pool: ThreadPoolExecutor):
+        self.thread_pool = thread_pool
+        self.loop = asyncio.get_running_loop()
+        # Import and configure pyautogui here to avoid import errors in test environments
+        import pyautogui
+        self.pyautogui = pyautogui
+        self.pyautogui.FAILSAFE = False
+        self.pyautogui.PAUSE = 0.001
+
+    async def execute(self, func, *args):
+        return await self.loop.run_in_executor(self.thread_pool, func, *args)
+
+    async def click(self, x, y, button):
+        await self.execute(self.pyautogui.click, x, y, button=button)
+
+    async def double_click(self, x, y, button):
+        await self.execute(self.pyautogui.doubleClick, x, y, button=button)
+
+    async def drag_to(self, x, y, duration):
+        await self.execute(self.pyautogui.dragTo, x, y, duration)
+
+    async def scroll(self, amount, x, y):
+        await self.execute(self.pyautogui.scroll, amount, x, y)
+
+    async def hscroll(self, amount, x, y):
+        await self.execute(self.pyautogui.hscroll, amount, x, y)
+
+    async def key_down(self, key):
+        await self.execute(self.pyautogui.keyDown, key)
+
+    async def key_up(self, key):
+        await self.execute(self.pyautogui.keyUp, key)
+
+    async def move_to(self, x, y, duration):
+        await self.execute(self.pyautogui.moveTo, x, y, duration=duration)
+
+    async def press(self, key):
+        await self.execute(self.pyautogui.press, key)
+
+    async def hotkey(self, *keys):
+        await self.execute(self.pyautogui.hotkey, *keys)
+
+    def size(self):
+        return self.pyautogui.size()
+
+
 class GestureExecutor:
-    """Exécuteur de gestes ultra-rapide avec prédiction"""
-    def __init__(self, config: ServerConfig, performance_monitor: PerformanceMonitor, thread_pool: ThreadPoolExecutor):
+    """Fast gesture executor with prediction and command queuing."""
+    def __init__(self, config: ServerConfig, performance_monitor: PerformanceMonitor, controller: SystemController):
         self.config = config
-        self.screen_width, self.screen_height = pyautogui.size()
+        self.performance_monitor = performance_monitor
+        self.controller = controller
+
+        self.screen_width, self.screen_height = self.controller.size()
         self.last_position = [0, 0]
         self.position_history = []
-        self.prediction_enabled = config.enable_prediction
-        self.performance_monitor = performance_monitor
-        self.thread_pool = thread_pool
-        self.lock = asyncio.Lock()  # Pour protéger l'accès à last_position et position_history
-        logger.info(f"🖥️ Résolution écran: {self.screen_width}x{self.screen_height}")
+        self.command_queue = asyncio.Queue(maxsize=100)
+        self.worker_task = asyncio.create_task(self._command_worker())
 
-    async def execute_command(self, command: GestureCommand) -> bool:
-        start_time = time.time()
+        logger.info(f"🖥️ Screen resolution: {self.screen_width}x{self.screen_height}")
+
+    async def submit_command(self, command: GestureCommand):
+        """Submits a command to the execution queue."""
         try:
-            # Conversion position relative -> absolue
-            # NOTE: Assumes client sends coordinates based on a 1920x1080 resolution.
-            abs_x = int(command.position[0] * self.screen_width / 1920)
-            abs_y = int(command.position[1] * self.screen_height / 1080)
+            self.command_queue.put_nowait(command)
+        except asyncio.QueueFull:
+            logger.warning("Command queue is full, dropping command.")
 
-            # Le lissage et la mise à jour de l'historique modifient un état partagé
-            async with self.lock:
-                if self.config.gesture_smoothing > 0:
-                    abs_x, abs_y = self._smooth_position(abs_x, abs_y)
+    async def _command_worker(self):
+        """Processes commands from the queue one by one."""
+        logger.info("Gesture executor worker started.")
+        while True:
+            command = await self.command_queue.get()
+            start_time = time.time()
+            try:
+                await self._execute_command_internal(command)
+            except Exception as e:
+                logger.error(f"❌ Error executing command {command.id}: {e}", exc_info=True)
+            finally:
+                latency = time.time() - start_time
+                if self.config.performance_logging:
+                    logger.debug(f"⚡ Command {command.id} processed in {latency*1000:.2f}ms")
+                await self.performance_monitor.record_command(latency)
+                self.command_queue.task_done()
 
-                # Exécution de l'action de manière non-bloquante
-                await self._execute_action(command.action, abs_x, abs_y, command.metadata)
+    async def _execute_command_internal(self, command: GestureCommand):
+        # Protocol definition: client MUST send normalized coordinates (0.0 to 1.0).
+        # This is more robust than assuming a fixed client resolution.
+        abs_x = int(command.position[0] * self.screen_width)
+        abs_y = int(command.position[1] * self.screen_height)
 
-                # L'historique est utilisé pour la prédiction, doit être protégé
-                self._update_position_history(abs_x, abs_y)
+        # Clamp values to be safe
+        abs_x = max(0, min(self.screen_width, abs_x))
+        abs_y = max(0, min(self.screen_height, abs_y))
 
-            return True
+        if self.config.gesture_smoothing > 0:
+            abs_x, abs_y = self._smooth_position(abs_x, abs_y)
 
-        except Exception as e:
-            logger.error(f"❌ Erreur exécution commande {command.id}: {e}")
-            return False
-        finally:
-            # Monitoring de la performance pour l'ensemble du traitement
-            latency = time.time() - start_time
-            if self.config.performance_logging:
-                logger.debug(f"⚡ Commande {command.id} traitée en {latency*1000:.2f}ms")
-            self.performance_monitor.record_command(latency)
+        await self._execute_action(command.action, abs_x, abs_y, command.metadata)
 
+        self._update_position_history(abs_x, abs_y)
 
-    async def _execute_action(self, action: str, x: int, y: int, metadata: Dict) -> None:
-        loop = asyncio.get_running_loop()
-
-        # Toutes les actions pyautogui sont bloquantes et doivent être exécutées dans un thread pool
+    async def _execute_action(self, action: str, x: int, y: int, metadata: Dict):
         if action == GestureAction.CLICK.value:
-            await loop.run_in_executor(self.thread_pool, pyautogui.click, x, y, metadata.get('button', 'left'))
+            await self.controller.click(x, y, metadata.get('button', 'left'))
         elif action == GestureAction.DOUBLE_CLICK.value:
-            await loop.run_in_executor(self.thread_pool, pyautogui.doubleClick, x, y, metadata.get('button', 'left'))
+            await self.controller.double_click(x, y, metadata.get('button', 'left'))
         elif action == GestureAction.DRAG.value:
-            start = metadata.get('from', [x, y])
             end = metadata.get('to', [x, y])
-            await loop.run_in_executor(self.thread_pool, pyautogui.dragTo, end[0], end[1], 0.001, 'left')
+            await self.controller.drag_to(end[0], end[1], 0.001)
         elif action == GestureAction.SCROLL.value:
             direction = metadata.get('direction', 'up')
             amount = metadata.get('amount', 3)
             if direction in ('up', 'down'):
-                scroll_func = pyautogui.scroll
-                scroll_amount = amount if direction == 'up' else -amount
+                await self.controller.scroll(amount if direction == 'up' else -amount, x, y)
             else:
-                scroll_func = pyautogui.hscroll
-                scroll_amount = amount if direction == 'right' else -amount
-            await loop.run_in_executor(self.thread_pool, scroll_func, scroll_amount, x, y)
+                await self.controller.hscroll(amount if direction == 'right' else -amount, x, y)
         elif action == GestureAction.ZOOM.value:
             factor = metadata.get('factor', 1.0)
             scroll_amt = int((factor - 1.0) * 5)
-            await loop.run_in_executor(self.thread_pool, pyautogui.keyDown, 'ctrl')
-            await loop.run_in_executor(self.thread_pool, pyautogui.scroll, scroll_amt, x, y)
-            await loop.run_in_executor(self.thread_pool, pyautogui.keyUp, 'ctrl')
+            await self.controller.key_down('ctrl')
+            await self.controller.scroll(scroll_amt, x, y)
+            await self.controller.key_up('ctrl')
         elif action == GestureAction.MOVE.value:
-            if self.prediction_enabled:
+            if self.config.enable_prediction:
                 px, py = self._predict_next_position(x, y)
-                await loop.run_in_executor(self.thread_pool, pyautogui.moveTo, px, py, 0.001)
+                await self.controller.move_to(px, py, 0.001)
             else:
-                await loop.run_in_executor(self.thread_pool, pyautogui.moveTo, x, y, 0.001)
+                await self.controller.move_to(x, y, 0.001)
         elif action == GestureAction.KEY_PRESS.value:
-            await loop.run_in_executor(self.thread_pool, pyautogui.press, metadata.get('key', 'space'))
+            await self.controller.press(metadata.get('key', 'space'))
         elif action == GestureAction.KEY_COMBO.value:
-            await loop.run_in_executor(self.thread_pool, pyautogui.hotkey, *metadata.get('keys', []))
+            await self.controller.hotkey(*metadata.get('keys', []))
 
     def _smooth_position(self, x: int, y: int):
-        # Cette méthode est maintenant appelée à l'intérieur d'un verrou
         alpha = 1.0 - self.config.gesture_smoothing
-        sx = int(alpha * x + (1-alpha) * self.last_position[0])
-        sy = int(alpha * y + (1-alpha) * self.last_position[1])
+        sx = int(alpha * x + (1 - alpha) * self.last_position[0])
+        sy = int(alpha * y + (1 - alpha) * self.last_position[1])
         self.last_position = [sx, sy]
         return sx, sy
 
@@ -231,201 +284,250 @@ class GestureExecutor:
         p1 = self.position_history[-1]
 
         dt = p1[2] - p0[2]
-        if dt <= 1e-6:  # Éviter la division par zéro
+        if dt <= 1e-6:  # Avoid division by zero
             return x, y
 
-        # Calcul de la vitesse
         vx = (p1[0] - p0[0]) / dt
         vy = (p1[1] - p0[1]) / dt
 
-        # Extrapolation simple sur un court intervalle de temps (ex: 50ms)
-        prediction_time = 0.05
-
+        prediction_time = 0.05  # Simple extrapolation 50ms into the future
         px = int(x + vx * prediction_time)
         py = int(y + vy * prediction_time)
 
-        # S'assurer que les coordonnées prédites restent dans les limites de l'écran
         px = max(0, min(self.screen_width, px))
         py = max(0, min(self.screen_height, py))
-
         return px, py
 
 
+from web_server import WebServer
+from aiohttp import web
+
+
 class GestureServer:
-    """Serveur principal multi-protocole"""
+    """Main multi-protocol server."""
 
     def __init__(self, config: ServerConfig = None):
-        self.config = config or ServerConfig()
+        self.config = config or load_config()
         self.thread_pool = ThreadPoolExecutor(max_workers=self.config.thread_pool_size)
-        # Le moniteur de performance est partagé entre le serveur et l'exécuteur
         self.performance_monitor = PerformanceMonitor()
-        self.executor = GestureExecutor(self.config, self.performance_monitor, self.thread_pool)
+        controller = SystemController(self.thread_pool)
+        self.executor = GestureExecutor(self.config, self.performance_monitor, controller)
+
         self.websocket_server = None
         self.udp_transport = None
         self.tcp_server = None
+        self.web_runner = None
+        self.running = False
+
+        # The WebServer needs a reference back to this instance to access metrics, etc.
+        self.web_server = WebServer(self)
 
     async def start(self):
+        self.running = True
+
+        # Setup and start the web server runner
+        self.web_runner = web.AppRunner(self.web_server.app)
+        await self.web_runner.setup()
+        web_site = web.TCPSite(self.web_runner, self.config.host, 8000) # Hardcode port 8000 for dashboard
+
         tasks = [
             self._start_websocket(),
             self._start_udp(),
             self._start_tcp(),
+            web_site.start(),
             self._performance_logger()
         ]
-        logger.info("✅ Tous les serveurs démarrés")
+        logger.info("✅ All servers started (including web server on port 8000)")
         await asyncio.gather(*tasks)
 
+    async def stop(self):
+        self.running = False
+        logger.info("🛑 Stopping servers...")
+
+        # Stop application servers
+        if self.websocket_server:
+            self.websocket_server.close()
+            await self.websocket_server.wait_closed()
+        if self.udp_transport:
+            self.udp_transport.close()
+        if self.tcp_server:
+            self.tcp_server.close()
+            await self.tcp_server.wait_closed()
+
+        # Stop web server
+        if self.web_runner:
+            await self.web_runner.cleanup()
+
+        self.executor.worker_task.cancel()
+        self.thread_pool.shutdown(wait=False)
+        logger.info("✅ Servers stopped.")
+
     async def _start_websocket(self):
-        async def handler(ws, path):
-            logger.info("🔗 WebSocket connecté")
+        async def handler(websocket):
+            """Handles an incoming WebSocket connection, including authentication."""
+            # --- Authentication Check ---
+            if self.config.secret_token:
+                try:
+                    # Token is expected as a query parameter, e.g., ws://.../?token=SECRET
+                    token = websocket.request_headers.get('Sec-WebSocket-Protocol')
+                    if token != self.config.secret_token:
+                        logger.warning(f"🔒 WebSocket connection denied from {websocket.remote_address}: Invalid token.")
+                        # Closing the connection gracefully
+                        await websocket.close(code=1008, reason="Invalid token")
+                        return
+                except Exception:
+                    logger.warning(f"🔒 WebSocket connection denied from {websocket.remote_address}: Token check failed.")
+                    await websocket.close(code=1008, reason="Invalid token")
+                    return
+
+            logger.info(f"🔗 WebSocket connected from {websocket.remote_address}")
             try:
-                async for msg in ws:
-                    await self._process_message(msg)
+                async for msg in websocket:
+                    await self._process_message(msg, websocket)
+            except ConnectionClosed:
+                logger.info(f"🔌 WebSocket disconnected from {websocket.remote_address}")
             except Exception as e:
-                logger.error(f"❌ Erreur inattendue dans le handler WebSocket: {e}", exc_info=True)
-            finally:
-                logger.info("🔌 WebSocket déconnecté")
+                logger.error(f"❌ Unexpected WebSocket error: {e}", exc_info=True)
 
         self.websocket_server = await websockets.serve(
             handler, self.config.host, self.config.websocket_port,
-            max_size=self.config.buffer_size, compression=None
+            max_size=self.config.buffer_size, compression=None,
+            # Pass the token as a subprotocol for the client to use
+            subprotocols=["token," + self.config.secret_token] if self.config.secret_token else None
         )
-        logger.info(f"🌐 WS sur {self.config.websocket_port}")
+        logger.info(f"🌐 WebSocket server listening on {self.config.host}:{self.config.websocket_port}")
 
     async def _start_udp(self):
+        class UDPProtocol(asyncio.DatagramProtocol):
+            def __init__(self, server_instance):
+                self.server = server_instance
+            def connection_made(self, transport):
+                self.server.udp_transport = transport
+            def datagram_received(self, data, addr):
+                asyncio.create_task(self.server._process_message(data))
+            def error_received(self, exc):
+                logger.error(f"📡 UDP error: {exc}")
+
         loop = asyncio.get_running_loop()
-        self.udp_transport, _ = await loop.create_datagram_endpoint(
-            lambda: self, local_addr=(self.config.host, self.config.udp_port)
+        await loop.create_datagram_endpoint(
+            lambda: UDPProtocol(self), local_addr=(self.config.host, self.config.udp_port)
         )
-        logger.info(f"📡 UDP sur {self.config.udp_port}")
-
-    def connection_made(self, transport):
-        pass
-
-    def datagram_received(self, data, addr):
-        asyncio.create_task(self._process_message(data))
+        logger.info(f"📡 UDP server listening on {self.config.host}:{self.config.udp_port}")
 
     async def _start_tcp(self):
-        async def handler(r, w):
-            logger.info("🔗 TCP connecté")
+        async def handler(reader, writer):
+            addr = writer.get_extra_info('peername')
+            logger.info(f"🔗 TCP connected from {addr}")
             try:
                 while True:
-                    data = await r.read(self.config.buffer_size)
+                    data = await reader.read(self.config.buffer_size)
                     if not data:
                         break
                     await self._process_message(data)
             except ConnectionResetError:
-                logger.warning("🔌 Connexion TCP réinitialisée par le client.")
+                logger.warning(f"🔌 TCP connection reset by {addr}.")
             except Exception as e:
-                logger.error(f"❌ Erreur TCP: {e}")
+                logger.error(f"❌ TCP Error from {addr}: {e}")
             finally:
-                logger.info("🔌 TCP déconnecté")
+                logger.info(f"🔌 TCP disconnected from {addr}")
+                writer.close()
+
         self.tcp_server = await asyncio.start_server(
             handler, self.config.host, self.config.tcp_port
         )
-        logger.info(f"🔌 TCP sur {self.config.tcp_port}")
+        logger.info(f"🔌 TCP server listening on {self.config.host}:{self.config.tcp_port}")
 
-    async def _process_message(self, raw_data: bytes):
+    async def _process_message(self, raw_data: bytes, ws: Optional[WebSocketServerProtocol] = None):
         try:
-            message_str = raw_data.decode('utf-8')
-            data = json.loads(message_str)
-
+            data = json.loads(raw_data)
             if data.get('type') == 'gesture_command':
                 command = GestureCommand.from_json(data)
-                # L'exécution de la commande inclut déjà le monitoring de performance
-                await self.executor.execute_command(command)
-            # autres types (heartbeat, status...) peuvent être gérés ici
+                if command:
+                    await self.executor.submit_command(command)
+                elif ws:
+                    await ws.send(json.dumps({"error": "Invalid command format", "id": data.get("id")}))
+            # Other message types (heartbeat, status...) can be handled here
         except json.JSONDecodeError:
-            logger.error("❌ Erreur de décodage JSON")
+            logger.error("❌ JSON decoding error")
+            if ws:
+                await ws.send(json.dumps({"error": "Invalid JSON format"}))
         except Exception as e:
-            logger.error(f"❌ Erreur lors du traitement du message: {e}")
+            logger.error(f"❌ Error processing message: {e}", exc_info=True)
+            if ws:
+                await ws.send(json.dumps({"error": "Internal server error"}))
 
     async def _performance_logger(self):
-        while True:
+        while self.running:
             await asyncio.sleep(5.0)
-            # Utilise le moniteur de performance de l'exécuteur qui contient les vraies données
-            stats = self.executor.performance_monitor.get_stats()
+            if not self.running: break
+            stats = await self.performance_monitor.get_stats()
             logger.info(
                 f"📊 Stats: {stats['commands_per_second']:.1f} cmd/s, "
-                f"Latence Moy: {stats['avg_latency']*1000:.2f}ms, "
-                f"Max: {stats['max_latency']*1000:.2f}ms"
+                f"Avg Latency: {stats['avg_latency_ms']:.2f}ms, "
+                f"Max: {stats['max_latency_ms']:.2f}ms"
             )
 
 
-def setup_signal_handlers(server: GestureServer):
-    def handler(sig, frame):
-        logger.info("🛑 Signal reçu, arrêt serveur...")
-        sys.exit(0)
-    signal.signal(signal.SIGINT, handler)
-    signal.signal(signal.SIGTERM, handler)
-
-
 def load_config(path: str = 'config.yaml') -> ServerConfig:
-    """Charge la configuration depuis un fichier YAML, avec des valeurs par défaut."""
-    # Valeurs par défaut codées en dur
+    """Loads configuration from a YAML file, with fallback to defaults."""
     defaults = {
         'network': {
-            'websocket_port': 8080,
-            'udp_port': 9090,
-            'tcp_port': 7070,
-            'host': "0.0.0.0",
-            'max_connections': 10,
-            'buffer_size': 8192,
+            'websocket_port': 8080, 'udp_port': 9090, 'tcp_port': 7070,
+            'host': "0.0.0.0", 'max_connections': 10, 'buffer_size': 8192,
         },
         'performance': {
-            'thread_pool_size': 4,
-            'enable_prediction': True,
-            'gesture_smoothing': 0.7,
-            'performance_logging': True,
-            'command_timeout': 0.001,
-            'heartbeat_interval': 1.0,
+            'thread_pool_size': 4, 'enable_prediction': True, 'gesture_smoothing': 0.7,
+            'performance_logging': True, 'command_timeout': 0.001, 'heartbeat_interval': 1.0,
+        },
+        'security': {
+            'secret_token': None,
         }
     }
-
     try:
         with open(path, 'r') as f:
-            user_config = yaml.safe_load(f)
-            if user_config:
-                # Fusionne les configurations utilisateur avec les défauts
-                network_settings = {**defaults['network'], **user_config.get('network', {})}
-                performance_settings = {**defaults['performance'], **user_config.get('performance', {})}
+            user_config = yaml.safe_load(f) or {}
 
-                logger.info(f"✅ Configuration chargée depuis '{path}'")
-                return ServerConfig(
-                    websocket_port=network_settings['websocket_port'],
-                    udp_port=network_settings['udp_port'],
-                    tcp_port=network_settings['tcp_port'],
-                    host=network_settings['host'],
-                    max_connections=network_settings['max_connections'],
-                    buffer_size=network_settings['buffer_size'],
-                    thread_pool_size=performance_settings['thread_pool_size'],
-                    enable_prediction=performance_settings['enable_prediction'],
-                    gesture_smoothing=performance_settings['gesture_smoothing'],
-                    performance_logging=performance_settings['performance_logging'],
-                    command_timeout=performance_settings['command_timeout'],
-                    heartbeat_interval=performance_settings['heartbeat_interval'],
-                )
+        # Deep merge user config with defaults
+        network_settings = {**defaults['network'], **user_config.get('network', {})}
+        performance_settings = {**defaults['performance'], **user_config.get('performance', {})}
+        security_settings = {**defaults['security'], **user_config.get('security', {})}
+
+        logger.info(f"✅ Configuration loaded from '{path}'")
+        return ServerConfig(**network_settings, **performance_settings, **security_settings)
+
     except FileNotFoundError:
-        logger.warning(f"⚠️ Fichier de configuration '{path}' non trouvé. Utilisation de la configuration par défaut.")
-    except yaml.YAMLError as e:
-        logger.error(f"❌ Erreur de parsing YAML dans '{path}': {e}. Utilisation de la configuration par défaut.")
-    except Exception as e:
-        logger.error(f"❌ Erreur inattendue lors du chargement de la configuration: {e}. Utilisation de la configuration par défaut.")
+        logger.warning(f"⚠️ Config file '{path}' not found. Using default configuration.")
+    except (yaml.YAMLError, TypeError) as e:
+        logger.error(f"❌ Error parsing YAML in '{path}': {e}. Using default configuration.")
 
-    # Retourne la configuration par défaut en cas d'erreur ou de fichier non trouvé
-    return ServerConfig()
+    # Combine all default dictionaries for the final fallback
+    return ServerConfig(**defaults['network'], **defaults['performance'], **defaults['security'])
 
 
 async def main():
-    config = load_config()
-    server = GestureServer(config)
-    setup_signal_handlers(server)
-    logger.info(f"🚀 Démarrage GestureControl Pro Serveur avec {config.thread_pool_size} threads.")
-    await server.start()
+    server = GestureServer()
+
+    def signal_handler():
+        logger.info("🛑 Signal received, shutting down...")
+        asyncio.create_task(server.stop())
+
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, signal_handler)
+
+    try:
+        logger.info(f"🚀 Starting GestureControl Pro Server with {server.config.thread_pool_size} threads.")
+        await server.start()
+    except asyncio.CancelledError:
+        pass
+    finally:
+        if server.running:
+            await server.stop()
 
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("👋 Serveur arrêté")
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("👋 Server shut down.")
 
