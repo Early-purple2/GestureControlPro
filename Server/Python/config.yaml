@@ -1,0 +1,25 @@
+# Default configuration for GestureControlPro Server
+# This file allows for easy customization of server settings.
+
+network:
+  websocket_port: 8080
+  udp_port: 9090
+  tcp_port: 7070
+  host: "0.0.0.0"
+  max_connections: 10
+  buffer_size: 8192
+
+performance:
+  thread_pool_size: 4
+  enable_prediction: true
+  gesture_smoothing: 0.7
+  performance_logging: true
+  command_timeout: 0.001 # in seconds
+  heartbeat_interval: 1.0 # in seconds
+
+# Note: The following settings from the README are illustrative
+# and are not used by the current version of the server, but are kept for future compatibility.
+# gestures:
+#   sensitivity: 0.8
+#   confidence_threshold: 0.85
+#   calibration_frames: 100
