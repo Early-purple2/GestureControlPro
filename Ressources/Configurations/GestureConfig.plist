@@ -1,1 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" 
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>sensitivity</key>
+    <real>0.8</real>
+    <key>smoothingFactor</key>
+    <real>0.7</real>
+    <key>confidenceThreshold</key>
+    <real>0.85</real>
+    <key>calibrationFrames</key>
+    <integer>100</integer>
+    <key>enablePrediction</key>
+    <true/>
+</dict>
+</plist>
 
