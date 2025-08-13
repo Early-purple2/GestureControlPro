@@ -1,1 +1,38 @@
+# Serveur GestureControl Pro - Dépendances Python
+# Version optimisée pour performance maximale
+
+# Core dependencies
+asyncio-mqtt==0.16.1
+uvloop==0.19.0
+websockets==12.0
+pyautogui==0.9.54
+
+# Network & Communication
+aiohttp==3.9.1
+websocket-client==1.7.0
+requests==2.31.0
+
+# Performance & Monitoring
+psutil==5.9.6
+numpy==1.25.2
+scipy==1.11.4
+
+# Logging & Configuration
+pyyaml==6.0.1
+python-dotenv==1.0.0
+colorama==0.4.6
+
+# Optional: Computer Vision (pour extensions futures)
+opencv-python==4.8.1.78
+mediapipe==0.10.8
+
+# Optional: Machine Learning (pour prédiction avancée)
+scikit-learn==1.3.2
+tensorflow-lite==2.14.0
+
+# Development & Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+flake8==6.1.0
 
