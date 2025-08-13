@@ -1,102 +1,72 @@
 #!/usr/bin/env python3
 """
-Serveur de Contrôle Gestuel Ultra-Performant
-Utilise les dernières technologies Python pour une latence minimale
-Support WebSocket, UDP, TCP avec threading optimisé
+Exécuteur de commandes gestuelles pour GestureControl Pro Node.js bridge
+Reçoit un payload JSON et exécute l'action via PyAutoGUI.
 """
 
-import asyncio
+import sys
 import json
 import time
-import threading
-import logging
-from dataclasses import dataclass, asdict
-from typing import Dict, List, Any
-from enum import Enum
-import signal
-import sys
-from concurrent.futures import ThreadPoolExecutor
-
-# Performant event loop
-import uvloop  # Pour performance async optimisée
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-
-# Imports pour contrôle système
 import pyautogui
-import websockets
-import socket
-import struct
+import logging
 
-# Configuration PyAutoGUI pour performance maximale
+# Configure minimal latency
 pyautogui.FAILSAFE = False
-pyautogui.PAUSE = 0.001  # Latence minimale entre commandes
+pyautogui.PAUSE = 0.001
 
-# Configuration logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('gesture_server.log'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+logger = logging.getLogger("gesture_executor")
 
 
-@dataclass
-class ServerConfig:
-    """Configuration du serveur avec optimisations"""
-    websocket_port: int = 8080
-    udp_port: int = 9090
-    tcp_port: int = 7070
-    host: str = "0.0.0.0"
-    max_connections: int = 10
-    heartbeat_interval: float = 1.0
-    command_timeout: float = 0.001  # 1ms max par commande
-    buffer_size: int = 8192
-    thread_pool_size: int = 4
-    enable_prediction: bool = True
-    gesture_smoothing: float = 0.7
-    performance_logging: bool = True
+def execute_command(payload: dict) -> bool:
+    action = payload.get('action', '')
+    pos = payload.get('position', [0, 0])
+    x, y = int(pos[0]), int(pos[1])
+    metadata = payload.get('metadata', {})
+
+    try:
+        if action == 'click':
+            btn = metadata.get('button', 'left')
+            pyautogui.click(x, y, button=btn)
+        elif action == 'double_click':
+            btn = metadata.get('button', 'left')
+            pyautogui.doubleClick(x, y, button=btn)
+        elif action == 'drag':
+            frm = metadata.get('from', [x, y])
+            to = metadata.get('to', [x, y])
+            pyautogui.dragTo(to[0], to[1], duration=0.001, button='left')
+        elif action == 'scroll':
+            dir = metadata.get('direction', 'up')
+            amt = metadata.get('amount', 3)
+            if dir in ('up', 'down'):
+                pyautogui.scroll(amt if dir=='up' else -amt, x=x, y=y)
+            else:
+                pyautogui.hscroll(amt if dir=='right' else -amt, x=x, y=y)
+        elif action == 'zoom':
+            factor = metadata.get('factor', 1.0)
+            pyautogui.keyDown('ctrl')
+            scroll_amt = int((factor - 1.0)*5)
+            pyautogui.scroll(scroll_amt, x=x, y=y)
+            pyautogui.keyUp('ctrl')
+        elif action == 'move':
+            pyautogui.moveTo(x, y, duration=0.001)
+        else:
+            logger.warning(f"Action inconnue : {action}")
+            return False
+        logger.info(f"✅ Executed {action} at ({x},{y})")
+        return True
+
+    except Exception as e:
+        logger.error(f"❌ Execution failed: {e}")
+        return False
 
 
-class GestureAction(Enum):
-    """Actions de geste supportées"""
-    CLICK = "click"
-    DOUBLE_CLICK = "double_click"
-    DRAG = "drag"
-    SCROLL = "scroll"
-    ZOOM = "zoom"
-    MOVE = "move"
-    KEY_PRESS = "key_press"
-    KEY_COMBO = "key_combo"
-
-
-class GestureCommand:
-    """Commande de geste avec métadonnées performance"""
-    def __init__(self, id: str, action: str, position: List[float], timestamp: float, metadata: Dict[str, Any]=None):
-        self.id = id
-        self.action = action
-        self.position = position
-        self.timestamp = timestamp
-        self.metadata = metadata or {}
-
-    @classmethod
-    def from_json(cls, data: Dict) -> 'GestureCommand':
-        payload = data.get('payload', {})
-        return cls(
-            id=data.get('id', ''),
-            action=payload.get('action', ''),
-            position=payload.get('position', [0, 0]),
-            timestamp=payload.get('timestamp', time.time()),
-            metadata=payload.get('metadata', {})
-        )
-
-
-class PerformanceMonitor:
-    """Moniteur de performance en temps réel"""
-    def __init__(self):
-        self.commands_processed = 0
-        self.total_latency = 0.0
-        self.max_latency =
-
+if __name__ == "__main__":
+    try:
+        raw = sys.argv[1]
+        payload = json.loads(raw)
+        success = execute_command(payload)
+        sys.exit(0 if success else 1)
+    except Exception as e:
+        logger.error(f"💥 Fatal executor error: {e}")
+        sys.exit(1)
