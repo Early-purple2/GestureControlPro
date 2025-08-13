@@ -1,1 +1,22 @@
 
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" 
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>host</key>
+    <string>0.0.0.0</string>
+    <key>websocketPort</key>
+    <integer>8080</integer>
+    <key>udpPort</key>
+    <integer>9090</integer>
+    <key>tcpPort</key>
+    <integer>7070</integer>
+    <key>maxConnections</key>
+    <integer>10</integer>
+    <key>timeoutSeconds</key>
+    <real>5.0</real>
+    <key>heartbeatInterval</key>
+    <real>1.0</real>
+</dict>
+</plist>
