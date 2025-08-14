@@ -3,9 +3,9 @@
   "name": "gesturecontrol-node",
   "version": "1.0.0",
   "description": "Node.js server for GestureControl Pro",
-  "main": "server.js",
+  "main": "serveur.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node serveur.js",
     "test": "echo \"No tests defined\" && exit 0"
   },
   "dependencies": {

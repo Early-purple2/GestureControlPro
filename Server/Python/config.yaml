@@ -2,7 +2,7 @@
 # This file allows for easy customization of server settings.
 
 network:
-  websocket_port: 8080
+  websocket_port: 8081
   udp_port: 9090
   tcp_port: 7070
   host: "0.0.0.0"
