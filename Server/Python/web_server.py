@@ -11,6 +11,8 @@ from aiohttp import web
 if TYPE_CHECKING:
     from .gesture_server import GestureServer, ServerConfig
 
+GESTURE_SERVER_KEY = web.AppKey('gesture_server', "GestureServer")
+
 
 @web.middleware
 async def auth_middleware(request: web.Request, handler):
@@ -20,7 +22,7 @@ async def auth_middleware(request: web.Request, handler):
         return await handler(request)
 
     # Allow access if no token is configured on the server
-    server: "GestureServer" = request.app['gesture_server']
+    server: "GestureServer" = request.app[GESTURE_SERVER_KEY]
     if not server.config.secret_token:
         return await handler(request)
 
@@ -53,7 +55,7 @@ class WebServer:
         self.app = web.Application(middlewares=[auth_middleware])
         # Store a reference to the gesture_server instance in the app's context
         # so the middleware can access it.
-        self.app['gesture_server'] = self.gesture_server
+        self.app[GESTURE_SERVER_KEY] = self.gesture_server
         self._setup_routes()
 
     def _setup_routes(self):

@@ -31,7 +31,7 @@ except ImportError:
 
 # System control imports
 import websockets
-from websockets.server import WebSocketServerProtocol
+from websockets.asyncio.server import ServerConnection
 from websockets.exceptions import ConnectionClosed
 
 # Configure logging
@@ -460,7 +460,7 @@ class GestureServer:
         )
         logger.info(f"🔌 TCP server listening on {self.config.host}:{self.config.tcp_port}")
 
-    async def _process_message(self, raw_data: bytes, ws: Optional[WebSocketServerProtocol] = None):
+    async def _process_message(self, raw_data: bytes, ws: Optional[ServerConnection] = None):
         try:
             data = json.loads(raw_data)
             if data.get('type') == 'gesture_command':
