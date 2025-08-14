@@ -1,294 +1,302 @@
 import Foundation
-import Vision
 import CoreGraphics
-import HandVector // Assuming this is how the module is imported
+import MediaPipeTasksVision
 
-// --- Placeholder Types ---
-// These types are based on the documentation. I will implement them later.
+// --- Vector Math Helpers ---
+// An extension to provide common 3D vector operations for gesture calculations.
+extension SIMD3 where Scalar == Float {
+    /// Calculates the dot product of two vectors.
+    static func dot(_ a: SIMD3<Float>, _ b: SIMD3<Float>) -> Float {
+        return a.x * b.x + a.y * b.y + a.z * b.z
+    }
+
+    /// Calculates the magnitude (length) of the vector.
+    var magnitude: Float {
+        return sqrt(SIMD3.dot(self, self))
+    }
+
+    /// Calculates the angle in radians between two vectors.
+    static func angle(from v1: SIMD3<Float>, to v2: SIMD3<Float>) -> Float {
+        let dotProduct = dot(v1, v2)
+        let mag1 = v1.magnitude
+        let mag2 = v2.magnitude
+        // Avoid division by zero
+        if mag1 == 0 || mag2 == 0 { return 0 }
+        // Clamp the cosine value to the valid range [-1, 1] to prevent domain errors from floating point inaccuracies.
+        let cosTheta = min(max(dotProduct / (mag1 * mag2), -1.0), 1.0)
+        return acos(cosTheta)
+    }
+
+    /// Calculates the Euclidean distance between two points.
+    static func distance(from p1: SIMD3<Float>, to p2: SIMD3<Float>) -> Float {
+        return (p2 - p1).magnitude
+    }
+}
+
+// --- Custom Data Structures for Hand Landmarks ---
+/// An enum to map MediaPipe's 21 hand landmark indices to physically meaningful joint names.
+public enum HandJointName: Int, CaseIterable {
+    case wrist = 0
+    case thumbCMC, thumbMP, thumbIP, thumbTip
+    case indexMCP, indexPIP, indexDIP, indexTip
+    case middleMCP, middlePIP, middleDIP, middleTip
+    case ringMCP, ringPIP, ringDIP, ringTip
+    case littleMCP, littlePIP, littleDIP, littleTip
+}
+
+/// A struct to hold information about a single hand landmark, combining its name and 3D position.
+/// We use the 'worldLandmarks' from MediaPipe, which are in real-world meters.
+struct HandLandmark {
+    let name: HandJointName
+    let position: SIMD3<Float>
+}
+
+// --- Placeholder Types (for context) ---
 class ConfigurationManager {
     static let shared = ConfigurationManager()
     var settings = GestureSettings()
 }
-
 struct GestureSettings {
     var isKalmanFilterEnabled = false
     var gestureThreshold: Float = 0.8
 }
-
 class KalmanFilter {
-    init(initialPoint: CGPoint) {}
-    func update(measurement: CGPoint) -> CGPoint { return measurement }
+    init(initialPoint: SIMD3<Float>) {}
+    func update(measurement: SIMD3<Float>) -> SIMD3<Float> { return measurement }
 }
-
-class MLPredictionService {
-    func predict(landmarks: [HVHandLandmark]) async -> String? {
-        // Placeholder for ML prediction
-        return nil
-    }
-}
-
 struct DetectedGesture {
-    let type: String // e.g., "click", "drag"
-    let position: CGPoint
+    let type: String
+    let position: CGPoint // The 2D screen position for the cursor
     let confidence: Float
 }
 
-
-// --- Main Class ---
-
 @MainActor
 @Observable
-class GestureManager {
+class GestureManager: MediaPipeServiceDelegate {
 
-    private let mlPredictionService: MLPredictionService
     private let configManager = ConfigurationManager.shared
 
-    // Store the built-in gestures from HandVector
-    private var builtinGestures: [String: HVHandInfo] = [:]
+    // History trackers for dynamic gestures
+    private var wristPositionHistory: [SIMD3<Float>] = []
+    private var indexTipPositionHistory: [SIMD3<Float>] = []
 
-    // Kalman filter for index finger tip smoothing
-    private var indexTipFilter: KalmanFilter?
+    init() {}
 
-    // --- Wave Detection State ---
-    private enum WaveDetectionState {
-        case idle
-        case detecting(startTime: TimeInterval, startPosition: CGPoint, directionChanges: Int)
-    }
-    private var waveDetectionState: WaveDetectionState = .idle
-    private var wristPositionHistory: [CGPoint] = []
-    private let waveDetectionThreshold: TimeInterval = 1.0 // 1 second
+    // MARK: - MediaPipeServiceDelegate Conformance
 
-    init() {
-        self.mlPredictionService = MLPredictionService()
-        loadBuiltinGestures()
-    }
-
-    private func loadBuiltinGestures() {
-        // Load the built-in gestures from HandVector's JSON files
-        // The HandVector README mentions built-in gestures.
-        // I'll assume there's a way to load them like this.
-        if let loadedGestures = HVHandInfo.builtinHandInfo {
-             self.builtinGestures = loadedGestures
-        }
-    }
-
-    /// Processes a hand tracking update to detect gestures.
-    /// I'm assuming the input is a HVHandInfo object, which is created from a HandAnchor.
-    func processHandInfo(_ handInfo: HVHandInfo) async -> DetectedGesture? {
-
-        // --- Kalman Filter for Smoothing ---
-        // Get the index finger tip landmark for position tracking
-        guard let indexTipLandmark = handInfo.landmarks.first(where: { $0.jointName == .indexTip }) else {
-            return nil
-        }
-        let trackedPoint: CGPoint
-
-        if configManager.settings.isKalmanFilterEnabled {
-            if let filter = self.indexTipFilter {
-                trackedPoint = filter.update(measurement: indexTipLandmark.position)
-            } else {
-                self.indexTipFilter = KalmanFilter(initialPoint: indexTipLandmark.position)
-                trackedPoint = indexTipLandmark.position
+    func mediaPipeService(_ mediaPipeService: MediaPipeService, didFinishWith result: Result<MediaPipeResult, Error>) {
+        switch result {
+        case .success(let mediaPipeResult):
+            // Extract the landmarks for the first detected hand.
+            guard let worldLandmarks = mediaPipeResult.worldLandmarks.first,
+                  let screenLandmarks = mediaPipeResult.landmarks.first else {
+                // No hand detected, reset histories.
+                wristPositionHistory.removeAll()
+                indexTipPositionHistory.removeAll()
+                return
             }
-        } else {
-            self.indexTipFilter = nil
-            trackedPoint = indexTipLandmark.position
+            processLandmarks(worldLandmarks, screenLandmarks: screenLandmarks)
+        case .failure(let error):
+            print("GestureManager received error: \(error.localizedDescription)")
         }
-
-        // --- Gesture Recognition ---
-        return await recognizeGesture(handInfo: handInfo, trackedPoint: trackedPoint)
     }
 
-    /// Recognizes a gesture from a set of hand landmarks.
-    private func recognizeGesture(handInfo: HVHandInfo, trackedPoint: CGPoint) async -> DetectedGesture? {
-        let waveResult = recognizeWaveGesture(handInfo: handInfo)
-        let cosineResult = recognizeWithCosineSimilarity(handInfo: handInfo)
-        let fingerShapeResult = recognizeWithFingerShape(handInfo: handInfo)
-        // ML result will be implemented later
-        // let mlResult = await recognizeWithML(landmarks: handInfo.landmarks)
+    func mediaPipeService(_ mediaPipeService: MediaPipeService, didFailWithError error: Error) {
+        print("GestureManager received failure: \(error.localizedDescription)")
+    }
 
-        // Fusion logic
-        if let finalResult = fuseResults(wave: waveResult, cosine: cosineResult, finger: fingerShapeResult, ml: nil) {
-            return DetectedGesture(type: finalResult.gesture, position: trackedPoint, confidence: finalResult.confidence)
+    // MARK: - Gesture Recognition Pipeline
+
+    /// The main entry point for processing landmark data.
+    private func processLandmarks(_ worldLandmarks: [Landmark], screenLandmarks: [Landmark]) {
+        // Convert the raw MediaPipe landmarks into our custom, named structure.
+        let handLandmarks = worldLandmarks.enumerated().compactMap { (index, landmark) -> HandLandmark? in
+            guard let jointName = HandJointName(rawValue: index) else { return nil }
+            return HandLandmark(name: jointName, position: SIMD3<Float>(landmark.x, landmark.y, landmark.z))
         }
 
-        // If no specific gesture is recognized, it's a move.
+        // Update position histories for dynamic gesture detection.
+        if let wrist = landmark(for: .wrist, in: handLandmarks) {
+            wristPositionHistory.append(wrist)
+            if wristPositionHistory.count > 50 { wristPositionHistory.removeFirst() } // Keep history size manageable
+        }
+        if let indexTip = landmark(for: .indexTip, in: handLandmarks) {
+            indexTipPositionHistory.append(indexTip)
+            if indexTipPositionHistory.count > 30 { indexTipPositionHistory.removeFirst() }
+        }
+
+        // Use the 2D screen coordinates of the index tip for the cursor position.
+        let indexTipScreenLandmark = screenLandmarks[HandJointName.indexTip.rawValue]
+        let trackedPoint2D = CGPoint(x: CGFloat(indexTipScreenLandmark.x), y: CGFloat(indexTipScreenLandmark.y))
+
+        // Run the recognition logic.
+        if let gesture = recognizeGesture(landmarks: handLandmarks, trackedPoint: trackedPoint2D) {
+            // In a real app, this would be delegated back to a coordinator.
+            print("Detected Gesture: \(gesture.type) at \(gesture.position) with confidence \(gesture.confidence)")
+        }
+    }
+
+    /// Runs the gesture recognition algorithms in a prioritized order.
+    private func recognizeGesture(landmarks: [HandLandmark], trackedPoint: CGPoint) -> DetectedGesture? {
+        // Priority 1: Check for transient, dynamic gestures first.
+        if let swipeResult = recognizeSwipeGesture(landmarks: landmarks) {
+            return DetectedGesture(type: swipeResult.gesture, position: trackedPoint, confidence: swipeResult.confidence)
+        }
+        if let waveResult = recognizeWaveGesture(landmarks: landmarks) {
+             return DetectedGesture(type: waveResult.gesture, position: trackedPoint, confidence: waveResult.confidence)
+        }
+
+        // Priority 2: Check for sustained, static poses.
+        if let fingerShapeResult = recognizeWithFingerShape(landmarks: landmarks) {
+             return DetectedGesture(type: fingerShapeResult.gesture, position: trackedPoint, confidence: fingerShapeResult.confidence)
+        }
+
+        // Priority 3: If no specific gesture is detected, default to a "move" action.
         return DetectedGesture(type: "move", position: trackedPoint, confidence: 0.5)
     }
 
-    // --- Recognition Methods ---
+    // MARK: - Dynamic Gesture Recognizers
 
-    private func recognizeWaveGesture(handInfo: HVHandInfo) -> (gesture: String, confidence: Float)? {
-        // A wave is an open hand moving horizontally.
-        // First, check if the hand is open.
-        guard let fingerShape = handInfo.fingerShape() else { return nil }
-        let isOpenHand = fingerShape.thumb.fullCurl < 0.3 &&
-                         fingerShape.index.fullCurl < 0.3 &&
-                         fingerShape.middle.fullCurl < 0.3 &&
-                         fingerShape.ring.fullCurl < 0.3 &&
-                         fingerShape.little.fullCurl < 0.3
+    private func recognizeSwipeGesture(landmarks: [HandLandmark]) -> (gesture: String, confidence: Float)? {
+        // A swipe is a fast movement with a pointing finger.
+        let isPointing = !isFingerCurled(for: .index, landmarks: landmarks) &&
+                          isFingerCurled(for: .middle, landmarks: landmarks) &&
+                          isFingerCurled(for: .ring, landmarks: landmarks) &&
+                          isFingerCurled(for: .little, landmarks: landmarks)
+        guard isPointing else { return nil }
 
-        guard isOpenHand else {
-            // If the hand is not open, reset the wave detection state.
-            waveDetectionState = .idle
+        // A swipe is a quick gesture, so we check over a short history.
+        let history = indexTipPositionHistory
+        let swipeFrames = 10 // Analyze the last 10 frames
+        guard history.count > swipeFrames else { return nil }
+
+        let startPoint = history[history.count - swipeFrames]
+        let endPoint = history.last!
+
+        let displacement = endPoint - startPoint
+        let distance = displacement.magnitude
+
+        // These thresholds are crucial for performance and need real-world tuning.
+        // They are based on the world coordinate system (meters).
+        let minDistance: Float = 0.15 // about 15cm
+        let minPrimaryAxisRatio: Float = 2.5 // Movement must be 2.5x more horizontal than vertical
+
+        if distance > minDistance {
+            if abs(displacement.x) > abs(displacement.y) * minPrimaryAxisRatio {
+                indexTipPositionHistory.removeAll() // Reset after detection to prevent re-triggering
+                return (gesture: displacement.x > 0 ? "swipe_right" : "swipe_left", confidence: 0.9)
+            }
+        }
+        return nil
+    }
+
+    private func recognizeWaveGesture(landmarks: [HandLandmark]) -> (gesture: String, confidence: Float)? {
+        // A wave is performed with an open hand.
+        let isHandOpen = !isFingerCurled(for: .index, landmarks: landmarks) &&
+                         !isFingerCurled(for: .middle, landmarks: landmarks) &&
+                         !isFingerCurled(for: .ring, landmarks: landmarks) &&
+                         !isFingerCurled(for: .little, landmarks: landmarks)
+        guard isHandOpen else {
             wristPositionHistory.removeAll()
             return nil
         }
 
-        // Get the wrist position.
-        guard let wristLandmark = handInfo.landmarks.first(where: { $0.jointName == .wrist }) else {
-            return nil
-        }
-        let wristPosition = wristLandmark.position
+        let history = wristPositionHistory
+        guard history.count > 30 else { return nil }
 
-        // Add the current wrist position to the history.
-        wristPositionHistory.append(wristPosition)
-        // Keep the history at a reasonable size.
-        if wristPositionHistory.count > 50 {
-            wristPositionHistory.removeFirst()
-        }
+        let xPositions = history.map { $0.x }
+        let yPositions = history.map { $0.y }
+        let xRange = (xPositions.max() ?? 0) - (xPositions.min() ?? 0)
+        let yRange = (yPositions.max() ?? 0) - (yPositions.min() ?? 0)
 
-        // Analyze the history for horizontal movement.
-        if wristPositionHistory.count > 10 {
-            let recentHistory = wristPositionHistory.suffix(10)
-            let xPositions = recentHistory.map { $0.x }
-            let yPositions = recentHistory.map { $0.y }
+        // A wave should be primarily horizontal and cover a minimum distance.
+        if xRange > yRange * 1.5 && xRange > 0.1 {
+            var directionChanges = 0
+            for i in 2..<xPositions.count {
+                let dx1 = xPositions[i-1] - xPositions[i-2]
+                let dx2 = xPositions[i] - xPositions[i-1]
+                if dx1 * dx2 < 0 { directionChanges += 1 } // Detects a change in direction
+            }
 
-            let xStdDev = standardDeviation(of: xPositions)
-            let yStdDev = standardDeviation(of: yPositions)
-
-            // A wave should have more horizontal movement than vertical.
-            if xStdDev > yStdDev * 2.0 && xStdDev > 10.0 {
-                 // Check for direction changes
-                var directionChanges = 0
-                for i in 1..<xPositions.count {
-                    let dx = xPositions[i] - xPositions[i-1]
-                    let prev_dx = i > 1 ? xPositions[i-1] - xPositions[i-2] : dx
-                    if dx * prev_dx < 0 { // Direction changed
-                        directionChanges += 1
-                    }
-                }
-
-                if directionChanges >= 2 {
-                    waveDetectionState = .idle
-                    wristPositionHistory.removeAll()
-                    return (gesture: "wave", confidence: 0.9)
-                }
+            // A wave should have at least two changes in direction (e.g., left-right-left).
+            if directionChanges >= 2 {
+                wristPositionHistory.removeAll()
+                return (gesture: "wave", confidence: 0.9)
             }
         }
+        return nil
+    }
+
+    // MARK: - Static Pose Recognizers
+
+    private func recognizeWithFingerShape(landmarks: [HandLandmark]) -> (gesture: String, confidence: Float)? {
+        // Pinch gesture for 'click' has the highest priority among static poses.
+        if let thumbTip = landmark(for: .thumbTip, in: landmarks), let indexTip = landmark(for: .indexTip, in: landmarks) {
+            let pinchDistance = SIMD3<Float>.distance(from: thumbTip, to: indexTip)
+            // This threshold is sensitive and needs tuning. It's in meters. 3cm is a reasonable start.
+            if pinchDistance < 0.03 {
+                return (gesture: "left_click", confidence: 0.95)
+            }
+        }
+
+        let indexCurled = isFingerCurled(for: .index, landmarks: landmarks)
+        let middleCurled = isFingerCurled(for: .middle, landmarks: landmarks)
+        let ringCurled = isFingerCurled(for: .ring, landmarks: landmarks)
+        let littleCurled = isFingerCurled(for: .little, landmarks: landmarks)
+
+        if indexCurled && middleCurled && ringCurled && littleCurled { return (gesture: "fist", confidence: 0.9) }
+        if !indexCurled && middleCurled && ringCurled && littleCurled { return (gesture: "point", confidence: 0.9) }
+        if !indexCurled && !middleCurled && !ringCurled && !littleCurled { return (gesture: "open_hand", confidence: 0.9) }
 
         return nil
     }
 
-    // Helper function to calculate standard deviation
-    private func standardDeviation(of values: [CGFloat]) -> CGFloat {
-        let mean = values.reduce(0, +) / CGFloat(values.count)
-        let variance = values.map { pow($0 - mean, 2) }.reduce(0, +) / CGFloat(values.count)
-        return sqrt(variance)
+    // MARK: - Gesture Logic Helpers
+
+    private func landmark(for joint: HandJointName, in landmarks: [HandLandmark]) -> SIMD3<Float>? {
+        return landmarks.first(where: { $0.name == joint })?.position
     }
 
-    private func recognizeWithCosineSimilarity(handInfo: HVHandInfo) -> (gesture: String, confidence: Float)? {
-        var bestMatch: (gesture: String, confidence: Float)? = nil
+    private enum Finger { case thumb, index, middle, ring, little }
 
-        for (name, gestureInfo) in builtinGestures {
-            let similarity = handInfo.similarity(of: .fiveFingers, to: gestureInfo) ?? -1.0
-            if similarity > configManager.settings.gestureThreshold {
-                if bestMatch == nil || similarity > bestMatch!.confidence {
-                    bestMatch = (gesture: name, confidence: Float(similarity))
-                }
-            }
-        }
-        return bestMatch
-    }
-
-    private func recognizeWithFingerShape(handInfo: HVHandInfo) -> (gesture: String, confidence: Float)? {
-        // This method requires defining gesture rules based on finger curl and pinch values.
-        guard let fingerShape = handInfo.fingerShape() else { return nil }
-
-        // Rule for "fist"
-        let isFist = fingerShape.thumb.fullCurl > 0.8 &&
-                     fingerShape.index.fullCurl > 0.8 &&
-                     fingerShape.middle.fullCurl > 0.8 &&
-                     fingerShape.ring.fullCurl > 0.8 &&
-                     fingerShape.little.fullCurl > 0.8
-        if isFist {
-            return (gesture: "closed_fist", confidence: 0.9)
+    /// Determines if a finger is curled based on the angles of its joints.
+    private func isFingerCurled(for finger: Finger, landmarks: [HandLandmark]) -> Bool {
+        if finger == .thumb {
+            // Thumb curl is complex. A simpler heuristic is to check the distance
+            // between the thumb tip and the wrist. This is less accurate but effective.
+            guard let tip = landmark(for: .thumbTip, in: landmarks),
+                  let cmc = landmark(for: .thumbCMC, in: landmarks),
+                  let wrist = landmark(for: .wrist, in: landmarks) else { return false }
+            return SIMD3<Float>.distance(from: tip, to: wrist) < SIMD3<Float>.distance(from: cmc, to: wrist)
         }
 
-        // Rule for "open_hand"
-        let isOpenHand = fingerShape.thumb.fullCurl < 0.2 &&
-                         fingerShape.index.fullCurl < 0.2 &&
-                         fingerShape.middle.fullCurl < 0.2 &&
-                         fingerShape.ring.fullCurl < 0.2 &&
-                         fingerShape.little.fullCurl < 0.2
-        if isOpenHand {
-            return (gesture: "open_hand", confidence: 0.9)
+        let mcpJoint, pipJoint, dipJoint, tipJoint: HandJointName
+        switch finger {
+        case .index: (mcpJoint, pipJoint, dipJoint, tipJoint) = (.indexMCP, .indexPIP, .indexDIP, .indexTip)
+        case .middle: (mcpJoint, pipJoint, dipJoint, tipJoint) = (.middleMCP, .middlePIP, .middleDIP, .middleTip)
+        case .ring: (mcpJoint, pipJoint, dipJoint, tipJoint) = (.ringMCP, .ringPIP, .ringDIP, .ringTip)
+        case .little: (mcpJoint, pipJoint, dipJoint, tipJoint) = (.littleMCP, .littlePIP, .littleDIP, .littleTip)
+        default: return false
         }
 
-        // Rule for "point"
-        let isPointing = fingerShape.index.fullCurl < 0.2 &&
-                         fingerShape.middle.fullCurl > 0.8 &&
-                         fingerShape.ring.fullCurl > 0.8 &&
-                         fingerShape.little.fullCurl > 0.8
-        if isPointing {
-            return (gesture: "point", confidence: 0.9)
+        guard let mcp = landmark(for: mcpJoint, in: landmarks), let pip = landmark(for: pipJoint, in: landmarks),
+              let dip = landmark(for: dipJoint, in: landmarks), let tip = landmark(for: tipJoint, in: landmarks) else {
+            return false
         }
 
-        // Rule for "click" (pinch)
-        // Assuming pinch is the distance to the thumb tip.
-        if fingerShape.index.pinch < 0.1 {
-            return (gesture: "left_click", confidence: 0.95)
-        }
+        // Create vectors for each segment of the finger.
+        let v1 = pip - mcp // Vector from MCP to PIP
+        let v2 = dip - pip // Vector from PIP to DIP
+        let v3 = tip - dip  // Vector from DIP to Tip
 
-        return nil
-    }
+        // Calculate the angle at the two main joints.
+        let anglePIP = SIMD3<Float>.angle(from: v1, to: v2)
+        let angleDIP = SIMD3<Float>.angle(from: v2, to: v3)
 
-    private enum RecognitionMethod {
-        case wave
-        case cosineSimilarity
-        case fingerShape
-        case machineLearning
-    }
-
-    private func fuseResults(wave: (gesture: String, confidence: Float)?,
-                           cosine: (gesture: String, confidence: Float)?,
-                           finger: (gesture: String, confidence: Float)?,
-                           ml: (gesture: String, confidence: Float)?) -> (gesture: String, confidence: Float)? {
-
-        let weights: [RecognitionMethod: Float] = [
-            .wave: 0.5, // High weight for dynamic gestures
-            .cosineSimilarity: 0.3,
-            .fingerShape: 0.2,
-            .machineLearning: 0.3 // ML weight will be used when implemented
-        ]
-
-        var scores: [String: Float] = [:]
-
-        if let wave = wave {
-            scores[wave.gesture, default: 0] += wave.confidence * (weights[.wave] ?? 0)
-        }
-        if let cosine = cosine {
-            scores[cosine.gesture, default: 0] += cosine.confidence * (weights[.cosineSimilarity] ?? 0)
-        }
-        if let finger = finger {
-            scores[finger.gesture, default: 0] += finger.confidence * (weights[.fingerShape] ?? 0)
-        }
-        if let ml = ml {
-            scores[ml.gesture, default: 0] += ml.confidence * (weights[.machineLearning] ?? 0)
-        }
-
-        guard let bestGesture = scores.max(by: { $0.value < $1.value }) else {
-            return nil
-        }
-
-        // Normalize the confidence score
-        let totalWeight = (wave != nil ? weights[.wave]! : 0) +
-                          (cosine != nil ? weights[.cosineSimilarity]! : 0) +
-                          (finger != nil ? weights[.fingerShape]! : 0) +
-                          (ml != nil ? weights[.machineLearning]! : 0)
-
-        let normalizedConfidence = bestGesture.value / max(totalWeight, 0.001) // avoid division by zero
-
-        return (gesture: bestGesture.key, confidence: normalizedConfidence)
+        // A finger is considered curled if the joint angles are sharp.
+        // Straight finger is ~PI radians (180 deg). Curled is < ~PI/2 (90 deg).
+        // Using a threshold of 100 degrees (1.745 rad) provides some tolerance.
+        let curlThreshold: Float = 1.745
+        return anglePIP < curlThreshold && angleDIP < curlThreshold
     }
 }
