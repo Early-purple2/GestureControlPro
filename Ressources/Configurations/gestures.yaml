@@ -1,0 +1,174 @@
+# -----------------------------------------------------------------------------
+# GestureControl Pro - Gesture Configuration File
+# -----------------------------------------------------------------------------
+# This file defines all the gestures recognized by the application.
+# You can customize, add, or remove gestures here without changing the code.
+#
+# Parameters:
+#   name: Display name for the gesture.
+#   id: The unique identifier sent from the client to the server.
+#   enabled: (true | false) - Whether the gesture is active.
+#   trigger: The detection algorithm to use.
+#     - "pinch": Detects when two fingertips are close.
+#     - "finger_pose": Detects a static pose based on which fingers are curled or extended.
+#     - "swipe": Detects a fast directional movement of a finger.
+#     - "wave": Detects a side-to-side waving motion of the open hand.
+#   parameters: Values that control the detection logic.
+#     - For "pinch":
+#       - finger1, finger2: The names of the joints to measure between (from HandJointName).
+#       - distance_threshold: The max distance in meters to trigger the pinch.
+#     - For "finger_pose":
+#       - A list of fingers and their required state ("curled" or "extended").
+#     - For "swipe":
+#       - min_distance: The minimum distance in meters the finger must travel.
+#       - min_primary_axis_ratio: How much more movement is needed on one axis (e.g., 2.5 means X movement must be 2.5x greater than Y).
+#   server_action: The action to be executed by the Python server.
+#   server_metadata: Additional data for the server action (e.g., which mouse button).
+# -----------------------------------------------------------------------------
+
+gestures:
+  # --- Pointer and Click Gestures ---
+  - name: "Move Pointer"
+    id: "move"
+    enabled: true
+    trigger: "finger_pose"
+    parameters:
+      - finger: "index"
+        state: "extended"
+      - finger: "middle"
+        state: "curled"
+      - finger: "ring"
+        state: "curled"
+      - finger: "little"
+        state: "curled"
+    server_action: "move"
+    server_metadata: {}
+
+  - name: "Left Click"
+    id: "left_click"
+    enabled: true
+    trigger: "pinch"
+    parameters:
+      finger1: "thumbTip"
+      finger2: "indexTip"
+      distance_threshold: 0.03
+    server_action: "click"
+    server_metadata:
+      button: "left"
+
+  - name: "Right Click"
+    id: "right_click"
+    enabled: true
+    trigger: "pinch"
+    parameters:
+      finger1: "thumbTip"
+      finger2: "middleTip"
+      distance_threshold: 0.035 # Slightly larger threshold for comfort
+    server_action: "click"
+    server_metadata:
+      button: "right"
+
+  - name: "Start Drag"
+    id: "drag_start"
+    enabled: true
+    trigger: "finger_pose"
+    parameters:
+      - finger: "index"
+        state: "curled"
+      - finger: "middle"
+        state: "curled"
+      - finger: "ring"
+        state: "curled"
+      - finger: "little"
+        state: "curled"
+    server_action: "drag_start"
+    server_metadata:
+      button: "left"
+
+  # --- Dynamic Gestures ---
+  - name: "Swipe Right"
+    id: "swipe_right"
+    enabled: true
+    trigger: "swipe"
+    parameters:
+      direction: "right"
+      min_distance: 0.15
+      min_primary_axis_ratio: 2.5
+    server_action: "key_press"
+    server_metadata:
+      key: "right"
+
+  - name: "Swipe Left"
+    id: "swipe_left"
+    enabled: true
+    trigger: "swipe"
+    parameters:
+      direction: "left"
+      min_distance: 0.15
+      min_primary_axis_ratio: 2.5
+    server_action: "key_press"
+    server_metadata:
+      key: "left"
+
+  - name: "Wave"
+    id: "wave"
+    enabled: true
+    trigger: "wave"
+    parameters:
+      min_distance: 0.1
+      min_direction_changes: 2
+    server_action: "hotkey"
+    server_metadata:
+      keys: ["alt", "tab"]
+
+  # --- Other Poses ---
+  - name: "End Drag"
+    id: "drag_end"
+    enabled: true
+    trigger: "finger_pose"
+    parameters:
+      - finger: "index"
+        state: "extended"
+      - finger: "middle"
+        state: "extended"
+      - finger: "ring"
+        state: "extended"
+      - finger: "little"
+        state: "extended"
+    server_action: "drag_end"
+    server_metadata:
+      button: "left"
+
+  - name: "Peace Sign"
+    id: "peace"
+    enabled: true
+    trigger: "finger_pose"
+    parameters:
+      - finger: "index"
+        state: "extended"
+      - finger: "middle"
+        state: "extended"
+      - finger: "ring"
+        state: "curled"
+      - finger: "little"
+        state: "curled"
+    server_action: "copy"
+    server_metadata: {}
+
+  - name: "Thumbs Up"
+    id: "thumbs_up"
+    enabled: false # Disabled by default
+    trigger: "finger_pose" # Note: requires more complex thumb logic
+    parameters:
+      - finger: "thumb"
+        state: "extended"
+      - finger: "index"
+        state: "curled"
+      - finger: "middle"
+        state: "curled"
+      - finger: "ring"
+        state: "curled"
+      - finger: "little"
+        state: "curled"
+    server_action: "paste"
+    server_metadata: {}

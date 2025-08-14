@@ -24,7 +24,8 @@ let package = Package(
         .package(url: "https://github.com/vapor/websocket-kit.git", from: "2.15.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.5.4"),
         .package(url: "https://github.com/apple/swift-metrics.git", from: "2.4.4"),
-        .package(url: "https://github.com/XanderXu/HandVector.git", from: "2.0.0")
+        .package(url: "https://github.com/XanderXu/HandVector.git", from: "2.0.0"),
+        .package(url: "https://github.com/jpsim/Yams.git", from: "5.1.2")
     ],
     targets: [
         .executableTarget(
@@ -38,7 +39,7 @@ let package = Package(
                 "HandVector"
             ],
             resources: [
-                .process("Resources")
+                .copy("Resources")
             ],
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency"),
@@ -51,7 +52,8 @@ let package = Package(
             dependencies: [
                 .product(name: "NIO", package: "swift-nio"),
                 .product(name: "Logging", package: "swift-log"),
-                "HandVector"
+                "HandVector",
+                .product(name: "Yams", package: "Yams")
             ],
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency")
