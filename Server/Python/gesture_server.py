@@ -64,7 +64,8 @@ class GestureAction(Enum):
     """Supported gesture actions."""
     CLICK = "click"
     DOUBLE_CLICK = "double_click"
-    DRAG = "drag"
+    DRAG_START = "drag_start"
+    DRAG_END = "drag_end"
     SCROLL = "scroll"
     ZOOM = "zoom"
     MOVE = "move"
@@ -195,6 +196,12 @@ class SystemController:
     async def key_up(self, key):
         await self.execute(self.pyautogui.keyUp, key)
 
+    async def mouse_down(self, x: int, y: int, button: str):
+        await self.execute(self.pyautogui.mouseDown, x, y, button=button)
+
+    async def mouse_up(self, x: int, y: int, button: str):
+        await self.execute(self.pyautogui.mouseUp, x, y, button=button)
+
     async def move_to(self, x, y, duration):
         await self.execute(self.pyautogui.moveTo, x, y, duration=duration)
 
@@ -249,6 +256,7 @@ class GestureExecutor:
         self.predictor = TrajectoryPredictor(self.screen_width, self.screen_height)
 
         self.last_position = [0, 0]
+        self.is_dragging = False
         self.command_queue = asyncio.Queue(maxsize=100)
         self.worker_task = asyncio.create_task(self._command_worker())
 
@@ -319,9 +327,20 @@ class GestureExecutor:
                 await self.controller.click(x, y, metadata.get('button', 'left'))
             elif action == GestureAction.DOUBLE_CLICK.value:
                 await self.controller.double_click(x, y, metadata.get('button', 'left'))
-            elif action == GestureAction.DRAG.value:
-                end = metadata.get('to', [x, y])
-                await self.controller.drag_to(end[0], end[1], 0.001)
+            elif action == GestureAction.DRAG_START.value:
+                if not self.is_dragging:
+                    logger.info(f"Drag Start at ({x}, {y})")
+                    self.is_dragging = True
+                    # Use a default button if not specified
+                    button = metadata.get('button', 'left')
+                    await self.controller.mouse_down(x, y, button)
+            elif action == GestureAction.DRAG_END.value:
+                if self.is_dragging:
+                    logger.info(f"Drag End at ({x}, {y})")
+                    self.is_dragging = False
+                    # Use a default button if not specified
+                    button = metadata.get('button', 'left')
+                    await self.controller.mouse_up(x, y, button)
             elif action == GestureAction.SCROLL.value:
                 direction = metadata.get('direction', 'up')
                 amount = metadata.get('amount', 3)
