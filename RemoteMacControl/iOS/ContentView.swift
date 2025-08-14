@@ -12,6 +12,9 @@ struct ContentView: View {
     @State private var tapLocation: CGPoint?
     @State private var showTapHighlight = false
 
+    // Keyboard State
+    @State private var keyboardText: String = ""
+
     var body: some View {
         TabView {
             // MARK: - Trackpad Tab
@@ -20,11 +23,77 @@ struct ContentView: View {
                     Label("Trackpad", systemImage: "cursorarrow")
                 }
 
+            // MARK: - Keyboard Tab
+            keyboardView
+                .tabItem {
+                    Label("Keyboard", systemImage: "keyboard")
+                }
+
             // MARK: - Dashboard Tab
             ServerDashboardView(client: client)
                 .tabItem {
                     Label("Dashboard", systemImage: "gauge.medium")
                 }
+        }
+    }
+
+    // MARK: - Keyboard View
+    private var keyboardView: some View {
+        VStack {
+            Spacer(minLength: 20)
+            TextEditor(text: $keyboardText)
+                .frame(minHeight: 150, idealHeight: 200)
+                .padding(4)
+                .background(Color(.systemBackground))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.5), lineWidth: 1))
+                .padding(.horizontal)
+                .autocapitalization(.none)
+                .disableAutocorrection(true)
+
+            HStack {
+                Button(action: {
+                    if !keyboardText.isEmpty {
+                        client.send(action: "type_text", metadata: ["text": keyboardText])
+                        keyboardText = "" // Clear after sending
+                    }
+                }) {
+                    Label("Send", systemImage: "paperplane.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(keyboardText.isEmpty)
+
+                Button(action: {
+                    hideKeyboard()
+                }) {
+                    Label("Dismiss", systemImage: "keyboard.chevron.compact.down")
+                }
+                .buttonStyle(.bordered)
+                .tint(.gray)
+            }
+            .padding([.horizontal, .top])
+
+
+            HStack(spacing: 10) {
+                Button(action: { client.send(action: "key_press", metadata: ["key": "enter"]) }) {
+                    Label("Enter", systemImage: "return")
+                }.buttonStyle(.bordered).tint(.gray)
+
+                Button(action: { client.send(action: "key_press", metadata: ["key": "delete"]) }) {
+                    Label("Delete", systemImage: "delete.left.fill")
+                }.buttonStyle(.bordered).tint(.gray)
+
+                Button(action: { client.send(action: "key_press", metadata: ["key": "escape"]) }) {
+                    Text("Esc")
+                }.buttonStyle(.bordered).tint(.gray)
+            }
+            .padding()
+
+            Spacer()
+        }
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .onTapGesture {
+            hideKeyboard()
         }
     }
 
@@ -158,20 +227,42 @@ struct ContentView: View {
                 if isScrollMode {
                     handleScroll(value: value, trackpadSize: trackpadSize)
                 } else {
-                    // For move, we send the absolute normalized position
-                    let normalizedPosition = normalize(point: value.location, in: trackpadSize)
-                    client.send(action: "move", position: normalizedPosition)
+                    handleMove(value: value)
                 }
             }
             .onEnded { value in
-                // Reset drag position for scroll mode
+                // Reset drag position for both modes
                 self.lastDragPosition = nil
 
                 // Check if the gesture was a tap (very little movement)
-                if value.translation.width < 10 && value.translation.height < 10 {
+                if !isScrollMode && value.translation.width < 10 && value.translation.height < 10 {
                     handleTap(location: value.location, trackpadSize: trackpadSize)
                 }
             }
+    }
+
+    private func handleMove(value: DragGesture.Value) {
+        let currentPos = value.location
+        guard let lastPos = self.lastDragPosition else {
+            // First touch event in a drag, just record position
+            self.lastDragPosition = currentPos
+            return
+        }
+
+        // Calculate delta
+        let dx = currentPos.x - lastPos.x
+        let dy = currentPos.y - lastPos.y
+
+        // Send relative move command if movement is significant enough
+        if abs(dx) > 0.1 || abs(dy) > 0.1 {
+            // The sensitivity can be tuned
+            let sensitivity: CGFloat = 1.5
+            client.send(
+                action: "move_relative",
+                metadata: ["dx": dx * sensitivity, "dy": dy * sensitivity]
+            )
+            self.lastDragPosition = currentPos // Update position
+        }
     }
 
     private func handleScroll(value: DragGesture.Value, trackpadSize: CGSize) {
