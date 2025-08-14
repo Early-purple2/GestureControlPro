@@ -5,7 +5,7 @@ const WebSocket = require('ws');
 const http = require('http');
 const gestureHandler = require('./gesture_handler');
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8082;
 
 // Serveur HTTP minimal (pour health check)
 const server = http.createServer((req, res) => {

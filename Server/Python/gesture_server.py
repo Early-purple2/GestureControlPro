@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ServerConfig:
     """Server configuration with optimizations."""
-    websocket_port: int = 8080
+    websocket_port: int = 8081
     udp_port: int = 9090
     tcp_port: int = 7070
     host: str = "0.0.0.0"
@@ -416,7 +416,7 @@ class GestureServer:
             max_queue=32,      # Limit queue size to prevent backpressure
             reuse_port=True,   # Allows multiple server processes on the same port
             # Pass the token as a subprotocol for the client to use
-            subprotocols=["token," + self.config.secret_token] if self.config.secret_token else None
+            subprotocols=["token", self.config.secret_token] if self.config.secret_token else None
         )
         logger.info(f"🌐 WebSocket server listening on {self.config.host}:{self.config.websocket_port}")
 
@@ -433,7 +433,8 @@ class GestureServer:
 
         loop = asyncio.get_running_loop()
         await loop.create_datagram_endpoint(
-            lambda: UDPProtocol(self), local_addr=(self.config.host, self.config.udp_port)
+            lambda: UDPProtocol(self), local_addr=(self.config.host, self.config.udp_port),
+            reuse_port=True
         )
         logger.info(f"📡 UDP server listening on {self.config.host}:{self.config.udp_port}")
 
