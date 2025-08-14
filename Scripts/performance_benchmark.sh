@@ -26,9 +26,10 @@ async def benchmark_network_latency():
     latencies = []
 
     try:
-        async with websockets.connect(uri, timeout=5) as websocket:
-            for i in range(100):
-                start = time.perf_counter()
+        async with asyncio.timeout(5):
+            async with websockets.connect(uri) as websocket:
+                for i in range(100):
+                    start = time.perf_counter()
 
                 message = {"id": f"bench-{i}", "type": "heartbeat", "timestamp": time.time()}
                 await websocket.send(json.dumps(message))
@@ -69,6 +70,8 @@ async def benchmark_command_throughput():
     start_time = time.perf_counter()
 
     try:
+        # Give the server a moment to start
+        await asyncio.sleep(3)
         async with websockets.connect(uri) as websocket:
 
             # Envoi commandes en parallèle

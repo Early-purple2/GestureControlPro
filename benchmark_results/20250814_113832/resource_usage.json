@@ -1,0 +1,15 @@
+{
+  "test": "resource_usage",
+  "duration_seconds": 60.10229241499974,
+  "cpu": {
+    "avg_percent": 0.096,
+    "max_percent": 2.4,
+    "min_percent": 0.0
+  },
+  "memory": {
+    "avg_mb": 155.3853515625,
+    "max_mb": 168.67578125,
+    "min_mb": 149.55859375
+  },
+  "samples": 100
+}
