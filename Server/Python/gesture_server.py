@@ -70,6 +70,8 @@ class GestureAction(Enum):
     MOVE = "move"
     KEY_PRESS = "key_press"
     KEY_COMBO = "key_combo"
+    TYPE_TEXT = "type_text"
+    MOVE_RELATIVE = "move_relative"
     WAVE = "wave"
 
 
@@ -179,11 +181,17 @@ class SystemController:
     async def move_to(self, x, y, duration):
         await self.execute(self.pyautogui.moveTo, x, y, duration=duration)
 
+    async def move_relative(self, dx: int, dy: int):
+        await self.execute(self.pyautogui.move, dx, dy)
+
     async def press(self, key):
         await self.execute(self.pyautogui.press, key)
 
     async def hotkey(self, *keys):
         await self.execute(self.pyautogui.hotkey, *keys)
+
+    async def type_string(self, text: str):
+        await self.execute(self.pyautogui.typewrite, text)
 
     def size(self):
         return self.pyautogui.size()
@@ -250,6 +258,12 @@ class GestureExecutor:
         action = command.action
         metadata = command.metadata
 
+        if action == GestureAction.MOVE_RELATIVE.value:
+            dx = int(metadata.get('dx', 0))
+            dy = int(metadata.get('dy', 0))
+            await self.controller.move_relative(dx, dy)
+            return
+
         if action == GestureAction.MOVE.value:
             if self.config.enable_prediction:
                 x, y = self._predict_next_position(command)
@@ -287,6 +301,8 @@ class GestureExecutor:
                 await self.controller.press(metadata.get('key', 'space'))
             elif action == GestureAction.KEY_COMBO.value:
                 await self.controller.hotkey(*metadata.get('keys', []))
+            elif action == GestureAction.TYPE_TEXT.value:
+                await self.controller.type_string(metadata.get('text', ''))
             elif action == GestureAction.WAVE.value:
                 await self.controller.hotkey('alt', 'tab')
 
