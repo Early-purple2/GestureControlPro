@@ -15,6 +15,8 @@ from typing import Dict, List, Any, Optional
 from enum import Enum
 import signal
 import sys
+import collections
+import socket
 from concurrent.futures import ThreadPoolExecutor
 import yaml
 import numpy as np
@@ -179,63 +181,70 @@ class SystemController:
 
 
 class TrajectoryPredictor:
-    """Predicts future cursor positions based on recent history using a simple ML model."""
-    def __init__(self, history_len: int = 10, retrain_interval: int = 30):
-        self.history_len = history_len
-        self.model = LinearRegression()
-        self.retrain_interval = retrain_interval
-        self.train_counter = 0
-        self.is_trained = False
-        self.last_known_dt = 0.01  # Start with a sensible default
+    """Predicts future cursor positions using a lightweight exponential smoothing algorithm."""
+    def __init__(self, history_len: int = 5, smoothing_factor: float = 0.7):
+        self.position_buffer = collections.deque(maxlen=history_len)
+        self.velocity_buffer = collections.deque(maxlen=history_len)
+        self.alpha = smoothing_factor  # Smoothing factor
+        self.screen_width, self.screen_height = 1920, 1080 # Default, will be updated
+        logger.info("🤖 Trajectory predictor initialized with lightweight smoothing algorithm.")
 
-    def train(self, history: List[tuple]):
-        """Trains the linear regression model on the position history."""
-        self.train_counter += 1
-        if self.train_counter < self.retrain_interval and self.is_trained:
-            return
+    def update_screen_size(self, width: int, height: int):
+        self.screen_width, self.screen_height = width, height
 
-        if len(history) < self.history_len:
-            return
+    def train(self, history: "collections.deque[tuple]"):
+        # This model doesn't require explicit training, but we'll use this call
+        # to update our internal buffers.
+        self.position_buffer = history
 
-        points = np.array(history[-self.history_len:])
-
-        # Features: previous position (x, y) and time delta (dt)
-        # Target: current position (x, y)
-        X = []
-        y = []
-        for i in range(1, len(points)):
-            p_prev = points[i-1]
-            p_curr = points[i]
-            dt = p_curr[2] - p_prev[2]
-            if dt > 1e-6:
-                X.append([p_prev[0], p_prev[1], dt])
-                y.append([p_curr[0], p_curr[1]])
-
-        if not X:
-            return
-
-        self.model.fit(X, y)
-        self.is_trained = True
-        self.train_counter = 0
-        logger.info("🤖 Trajectory predictor model retrained.")
-
-    def predict(self, history: List[tuple]) -> Optional[List[int]]:
-        """Predicts the next position."""
-        if not self.is_trained or len(history) < 2:
+    def predict(self, history: "collections.deque[tuple]") -> Optional[List[int]]:
+        """Predicts the next position using exponential smoothing on velocity."""
+        self.position_buffer = history
+        if len(self.position_buffer) < 2:
             return None
 
-        p_last = history[-1]
-        p_prev = history[-2]
+        # Update velocity buffer
+        self.velocity_buffer.clear()
+        for i in range(1, len(self.position_buffer)):
+            p_prev = self.position_buffer[i-1]
+            p_curr = self.position_buffer[i]
+            dt = p_curr[2] - p_prev[2]
+            if dt > 1e-6: # Avoid division by zero
+                velocity_x = (p_curr[0] - p_prev[0]) / dt
+                velocity_y = (p_curr[1] - p_prev[1]) / dt
+                self.velocity_buffer.append((velocity_x, velocity_y))
 
-        dt = p_last[2] - p_prev[2]
-        if dt <= 1e-6:
-            dt = self.last_known_dt  # Use last known good dt
-        else:
-            self.last_known_dt = dt
+        if not self.velocity_buffer:
+            return None
 
-        # Predict based on the last known position and time delta
-        prediction = self.model.predict([[p_last[0], p_last[1], dt]])
-        return [int(prediction[0][0]), int(prediction[0][1])]
+        # Exponential smoothing on velocity
+        avg_velocity_x = 0
+        avg_velocity_y = 0
+        norm_factor = 0
+        for i, (vx, vy) in enumerate(reversed(self.velocity_buffer)):
+            weight = self.alpha ** i
+            avg_velocity_x += vx * weight
+            avg_velocity_y += vy * weight
+            norm_factor += weight
+
+        if norm_factor > 0:
+            avg_velocity_x /= norm_factor
+            avg_velocity_y /= norm_factor
+        else: # Fallback if buffer was empty
+            avg_velocity_x, avg_velocity_y = self.velocity_buffer[-1]
+
+
+        # Predict 20ms into the future
+        prediction_time = 0.020
+        current_position = self.position_buffer[-1]
+        predicted_x = current_position[0] + avg_velocity_x * prediction_time
+        predicted_y = current_position[1] + avg_velocity_y * prediction_time
+
+        # Clamp to screen bounds
+        predicted_x = max(0, min(self.screen_width, predicted_x))
+        predicted_y = max(0, min(self.screen_height, predicted_y))
+
+        return [int(predicted_x), int(predicted_y)]
 
 
 class GestureExecutor:
@@ -244,11 +253,12 @@ class GestureExecutor:
         self.config = config
         self.performance_monitor = performance_monitor
         self.controller = controller
-        self.predictor = TrajectoryPredictor()
+        self.predictor = TrajectoryPredictor(history_len=10) # Using a slightly larger history for the deque
 
         self.screen_width, self.screen_height = self.controller.size()
+        self.predictor.update_screen_size(self.screen_width, self.screen_height) # Pass screen size to predictor
         self.last_position = [0, 0]
-        self.position_history = []
+        self.position_history = collections.deque(maxlen=10)
         self.command_queue = asyncio.Queue(maxsize=100)
         self.worker_task = asyncio.create_task(self._command_worker())
 
@@ -337,10 +347,9 @@ class GestureExecutor:
 
     def _update_position_history(self, x: int, y: int):
         self.position_history.append((x, y, time.time()))
-        if len(self.position_history) > self.predictor.history_len:
-            self.position_history.pop(0)
 
         if self.config.enable_prediction:
+            # The new predictor is "trained" by simply having access to the history
             self.predictor.train(self.position_history)
 
     def _predict_next_position(self, x: int, y: int) -> tuple[int, int]:
@@ -440,6 +449,11 @@ class GestureServer:
 
             logger.info(f"🔗 WebSocket connected from {websocket.remote_address}")
             try:
+                # Set TCP_NODELAY for lower latency
+                sock = websocket.transport.get_extra_info('socket')
+                if sock is not None:
+                    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
                 async for msg in websocket:
                     await self._process_message(msg, websocket)
             except ConnectionClosed:
@@ -449,7 +463,10 @@ class GestureServer:
 
         self.websocket_server = await websockets.serve(
             handler, self.config.host, self.config.websocket_port,
-            max_size=self.config.buffer_size, compression=None,
+            max_size=self.config.buffer_size,
+            compression=None,  # Compression disabled for lower latency
+            max_queue=32,      # Limit queue size to prevent backpressure
+            reuse_port=True,   # Allows multiple server processes on the same port
             # Pass the token as a subprotocol for the client to use
             subprotocols=["token," + self.config.secret_token] if self.config.secret_token else None
         )
@@ -588,4 +605,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
         logger.info("👋 Server shut down.")
-
