@@ -6,6 +6,7 @@ asyncio-mqtt
 uvloop
 websockets
 pyautogui
+pyperclip
 
 # Network & Communication
 aiohttp
@@ -24,6 +25,7 @@ colorama
 # Optional: Computer Vision (pour extensions futures)
 opencv-python
 mediapipe
+translators
 
 # Optional: Machine Learning (pour prédiction avancée)
 # tensorflow-lite is not available on PyPI for Python 3.12 on this platform yet.

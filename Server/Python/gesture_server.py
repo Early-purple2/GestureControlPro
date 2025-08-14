@@ -73,6 +73,9 @@ class GestureAction(Enum):
     TYPE_TEXT = "type_text"
     MOVE_RELATIVE = "move_relative"
     WAVE = "wave"
+    COPY = "copy"
+    PASTE = "paste"
+    TRANSLATE = "translate"
 
 
 @dataclass
@@ -148,11 +151,25 @@ class SystemController:
             self.pyautogui = pyautogui
             self.pyautogui.FAILSAFE = False
             self.pyautogui.PAUSE = 0.001
+            try:
+                import pyperclip
+                self.pyperclip = pyperclip
+            except ImportError:
+                from unittest.mock import MagicMock
+                self.pyperclip = MagicMock()
+            try:
+                import translators as ts
+                self.translators = ts
+            except ImportError:
+                from unittest.mock import MagicMock
+                self.translators = MagicMock()
         else:
             # Use a mock pyautogui if no display is available
             from unittest.mock import MagicMock
             self.pyautogui = MagicMock()
             self.pyautogui.size.return_value = (1920, 1080)
+            self.pyperclip = MagicMock()
+            self.translators = MagicMock()
 
     async def execute(self, func, *args):
         return await self.loop.run_in_executor(self.thread_pool, func, *args)
@@ -195,6 +212,27 @@ class SystemController:
 
     def size(self):
         return self.pyautogui.size()
+
+    async def copy_to_clipboard(self, text: str):
+        await self.execute(self.pyperclip.copy, text)
+
+    async def paste_from_clipboard(self):
+        if sys.platform == 'darwin':
+            await self.hotkey('cmd', 'v')
+        else:
+            await self.hotkey('ctrl', 'v')
+
+    async def copy_selection_to_clipboard(self):
+        if sys.platform == 'darwin':
+            await self.hotkey('cmd', 'c')
+        else:
+            await self.hotkey('ctrl', 'c')
+
+    async def read_clipboard(self):
+        return await self.execute(self.pyperclip.paste)
+
+    async def translate(self, text: str, to_language='en'):
+        return await self.execute(self.translators.translate_text, text, to_language=to_language)
 
 
 from trajectory_predictor import TrajectoryPredictor
@@ -305,6 +343,21 @@ class GestureExecutor:
                 await self.controller.type_string(metadata.get('text', ''))
             elif action == GestureAction.WAVE.value:
                 await self.controller.hotkey('alt', 'tab')
+            elif action == GestureAction.COPY.value:
+                await self.controller.copy_selection_to_clipboard()
+            elif action == GestureAction.PASTE.value:
+                text_to_paste = metadata.get('text', '')
+                if text_to_paste:
+                    await self.controller.copy_to_clipboard(text_to_paste)
+                    await self.controller.paste_from_clipboard()
+            elif action == GestureAction.TRANSLATE.value:
+                await self.controller.copy_selection_to_clipboard()
+                await asyncio.sleep(0.1) # Give time for clipboard to update
+                text_to_translate = await self.controller.read_clipboard()
+                if text_to_translate:
+                    translated_text = await self.controller.translate(text_to_translate)
+                    await self.controller.copy_to_clipboard(translated_text)
+                    await self.controller.paste_from_clipboard()
 
     def _smooth_position(self, x: int, y: int):
         alpha = 1.0 - self.config.gesture_smoothing

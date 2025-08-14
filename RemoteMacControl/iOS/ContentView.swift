@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var client = iOSClient()
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
 
     // UI & Gesture State
     @State private var isScrollMode = false
@@ -16,24 +17,49 @@ struct ContentView: View {
     @State private var keyboardText: String = ""
 
     var body: some View {
+        if horizontalSizeClass == .compact {
+            tabView
+        } else {
+            navigationView
+        }
+    }
+
+    private var tabView: some View {
         TabView {
-            // MARK: - Trackpad Tab
             trackpadAndControlsView
                 .tabItem {
                     Label("Trackpad", systemImage: "cursorarrow")
                 }
 
-            // MARK: - Keyboard Tab
             keyboardView
                 .tabItem {
                     Label("Keyboard", systemImage: "keyboard")
                 }
 
-            // MARK: - Dashboard Tab
             ServerDashboardView(client: client)
                 .tabItem {
                     Label("Dashboard", systemImage: "gauge.medium")
                 }
+        }
+    }
+
+    private var navigationView: some View {
+        NavigationView {
+            List {
+                NavigationLink(destination: trackpadAndControlsView) {
+                    Label("Trackpad", systemImage: "cursorarrow")
+                }
+                NavigationLink(destination: keyboardView) {
+                    Label("Keyboard", systemImage: "keyboard")
+                }
+                NavigationLink(destination: ServerDashboardView(client: client)) {
+                    Label("Dashboard", systemImage: "gauge.medium")
+                }
+            }
+            .listStyle(SidebarListStyle())
+            .navigationTitle("Remote Control")
+
+            trackpadAndControlsView
         }
     }
 
@@ -42,7 +68,7 @@ struct ContentView: View {
         VStack {
             Spacer(minLength: 20)
             TextEditor(text: $keyboardText)
-                .frame(minHeight: 150, idealHeight: 200)
+                .frame(minHeight: 150, idealHeight: 200, maxHeight: 400)
                 .padding(4)
                 .background(Color(.systemBackground))
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.5), lineWidth: 1))
@@ -185,6 +211,33 @@ struct ContentView: View {
                         client.send(action: "key_press", position: [], metadata: ["key": "f11"])
                     }) {
                         Label("Show Desktop", systemImage: "desktopcomputer")
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.gray)
+                }
+                HStack(spacing: 15) {
+                    Button(action: {
+                        client.send(action: "copy")
+                    }) {
+                        Label("Copy", systemImage: "doc.on.doc")
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.gray)
+
+                    Button(action: {
+                        if let pasteboardString = UIPasteboard.general.string {
+                            client.send(action: "paste", metadata: ["text": pasteboardString])
+                        }
+                    }) {
+                        Label("Paste", systemImage: "doc.on.clipboard")
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.gray)
+
+                    Button(action: {
+                        client.send(action: "translate")
+                    }) {
+                        Label("Translate", systemImage: "character.bubble")
                     }
                     .buttonStyle(.bordered)
                     .tint(.gray)
