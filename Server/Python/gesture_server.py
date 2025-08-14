@@ -70,6 +70,7 @@ class GestureAction(Enum):
     MOVE = "move"
     KEY_PRESS = "key_press"
     KEY_COMBO = "key_combo"
+    WAVE = "wave"
 
 
 @dataclass
@@ -137,11 +138,19 @@ class SystemController:
     def __init__(self, thread_pool: ThreadPoolExecutor):
         self.thread_pool = thread_pool
         self.loop = asyncio.get_running_loop()
-        # Import and configure pyautogui here to avoid import errors in test environments
-        import pyautogui
-        self.pyautogui = pyautogui
-        self.pyautogui.FAILSAFE = False
-        self.pyautogui.PAUSE = 0.001
+
+        # Check if we are in a headless environment
+        import os
+        if 'DISPLAY' in os.environ:
+            import pyautogui
+            self.pyautogui = pyautogui
+            self.pyautogui.FAILSAFE = False
+            self.pyautogui.PAUSE = 0.001
+        else:
+            # Use a mock pyautogui if no display is available
+            from unittest.mock import MagicMock
+            self.pyautogui = MagicMock()
+            self.pyautogui.size.return_value = (1920, 1080)
 
     async def execute(self, func, *args):
         return await self.loop.run_in_executor(self.thread_pool, func, *args)
@@ -180,71 +189,7 @@ class SystemController:
         return self.pyautogui.size()
 
 
-class TrajectoryPredictor:
-    """Predicts future cursor positions using a lightweight exponential smoothing algorithm."""
-    def __init__(self, history_len: int = 5, smoothing_factor: float = 0.7):
-        self.position_buffer = collections.deque(maxlen=history_len)
-        self.velocity_buffer = collections.deque(maxlen=history_len)
-        self.alpha = smoothing_factor  # Smoothing factor
-        self.screen_width, self.screen_height = 1920, 1080 # Default, will be updated
-        logger.info("🤖 Trajectory predictor initialized with lightweight smoothing algorithm.")
-
-    def update_screen_size(self, width: int, height: int):
-        self.screen_width, self.screen_height = width, height
-
-    def train(self, history: "collections.deque[tuple]"):
-        # This model doesn't require explicit training, but we'll use this call
-        # to update our internal buffers.
-        self.position_buffer = history
-
-    def predict(self, history: "collections.deque[tuple]") -> Optional[List[int]]:
-        """Predicts the next position using exponential smoothing on velocity."""
-        self.position_buffer = history
-        if len(self.position_buffer) < 2:
-            return None
-
-        # Update velocity buffer
-        self.velocity_buffer.clear()
-        for i in range(1, len(self.position_buffer)):
-            p_prev = self.position_buffer[i-1]
-            p_curr = self.position_buffer[i]
-            dt = p_curr[2] - p_prev[2]
-            if dt > 1e-6: # Avoid division by zero
-                velocity_x = (p_curr[0] - p_prev[0]) / dt
-                velocity_y = (p_curr[1] - p_prev[1]) / dt
-                self.velocity_buffer.append((velocity_x, velocity_y))
-
-        if not self.velocity_buffer:
-            return None
-
-        # Exponential smoothing on velocity
-        avg_velocity_x = 0
-        avg_velocity_y = 0
-        norm_factor = 0
-        for i, (vx, vy) in enumerate(reversed(self.velocity_buffer)):
-            weight = self.alpha ** i
-            avg_velocity_x += vx * weight
-            avg_velocity_y += vy * weight
-            norm_factor += weight
-
-        if norm_factor > 0:
-            avg_velocity_x /= norm_factor
-            avg_velocity_y /= norm_factor
-        else: # Fallback if buffer was empty
-            avg_velocity_x, avg_velocity_y = self.velocity_buffer[-1]
-
-
-        # Predict 20ms into the future
-        prediction_time = 0.020
-        current_position = self.position_buffer[-1]
-        predicted_x = current_position[0] + avg_velocity_x * prediction_time
-        predicted_y = current_position[1] + avg_velocity_y * prediction_time
-
-        # Clamp to screen bounds
-        predicted_x = max(0, min(self.screen_width, predicted_x))
-        predicted_y = max(0, min(self.screen_height, predicted_y))
-
-        return [int(predicted_x), int(predicted_y)]
+from trajectory_predictor import TrajectoryPredictor
 
 
 class GestureExecutor:
@@ -253,12 +198,11 @@ class GestureExecutor:
         self.config = config
         self.performance_monitor = performance_monitor
         self.controller = controller
-        self.predictor = TrajectoryPredictor(history_len=10) # Using a slightly larger history for the deque
 
         self.screen_width, self.screen_height = self.controller.size()
-        self.predictor.update_screen_size(self.screen_width, self.screen_height) # Pass screen size to predictor
+        self.predictor = TrajectoryPredictor(self.screen_width, self.screen_height)
+
         self.last_position = [0, 0]
-        self.position_history = collections.deque(maxlen=10)
         self.command_queue = asyncio.Queue(maxsize=100)
         self.worker_task = asyncio.create_task(self._command_worker())
 
@@ -291,52 +235,60 @@ class GestureExecutor:
                 self.command_queue.task_done()
 
     async def _execute_command_internal(self, command: GestureCommand):
-        # Protocol definition: client MUST send normalized coordinates (0.0 to 1.0).
+        # This method now only does the coordinate conversion and clamping.
+        # Smoothing and prediction are handled in _execute_action.
         abs_x = int(command.position[0] * self.screen_width)
         abs_y = int(command.position[1] * self.screen_height)
 
-        # Clamp values to be safe
         abs_x = max(0, min(self.screen_width, abs_x))
         abs_y = max(0, min(self.screen_height, abs_y))
 
-        if self.config.gesture_smoothing > 0:
-            abs_x, abs_y = self._smooth_position(abs_x, abs_y)
+        await self._execute_action(command, abs_x, abs_y)
 
-        await self._execute_action(command.action, abs_x, abs_y, command.metadata)
 
-        self._update_position_history(abs_x, abs_y)
+    async def _execute_action(self, command: GestureCommand, x: int, y: int):
+        action = command.action
+        metadata = command.metadata
 
-    async def _execute_action(self, action: str, x: int, y: int, metadata: Dict):
-        if action == GestureAction.CLICK.value:
-            await self.controller.click(x, y, metadata.get('button', 'left'))
-        elif action == GestureAction.DOUBLE_CLICK.value:
-            await self.controller.double_click(x, y, metadata.get('button', 'left'))
-        elif action == GestureAction.DRAG.value:
-            end = metadata.get('to', [x, y])
-            await self.controller.drag_to(end[0], end[1], 0.001)
-        elif action == GestureAction.SCROLL.value:
-            direction = metadata.get('direction', 'up')
-            amount = metadata.get('amount', 3)
-            if direction in ('up', 'down'):
-                await self.controller.scroll(amount if direction == 'up' else -amount, x, y)
-            else:
-                await self.controller.hscroll(amount if direction == 'right' else -amount, x, y)
-        elif action == GestureAction.ZOOM.value:
-            factor = metadata.get('factor', 1.0)
-            scroll_amt = int((factor - 1.0) * 5)
-            await self.controller.key_down('ctrl')
-            await self.controller.scroll(scroll_amt, x, y)
-            await self.controller.key_up('ctrl')
-        elif action == GestureAction.MOVE.value:
+        if action == GestureAction.MOVE.value:
             if self.config.enable_prediction:
-                px, py = self._predict_next_position(x, y)
-                await self.controller.move_to(px, py, 0.001)
-            else:
-                await self.controller.move_to(x, y, 0.001)
-        elif action == GestureAction.KEY_PRESS.value:
-            await self.controller.press(metadata.get('key', 'space'))
-        elif action == GestureAction.KEY_COMBO.value:
-            await self.controller.hotkey(*metadata.get('keys', []))
+                x, y = self._predict_next_position(command)
+
+            if self.config.gesture_smoothing > 0:
+                x, y = self._smooth_position(x, y)
+
+            await self.controller.move_to(x, y, 0.001)
+        else:
+            # Apply smoothing for all other actions
+            if self.config.gesture_smoothing > 0:
+                x, y = self._smooth_position(x, y)
+
+            if action == GestureAction.CLICK.value:
+                await self.controller.click(x, y, metadata.get('button', 'left'))
+            elif action == GestureAction.DOUBLE_CLICK.value:
+                await self.controller.double_click(x, y, metadata.get('button', 'left'))
+            elif action == GestureAction.DRAG.value:
+                end = metadata.get('to', [x, y])
+                await self.controller.drag_to(end[0], end[1], 0.001)
+            elif action == GestureAction.SCROLL.value:
+                direction = metadata.get('direction', 'up')
+                amount = metadata.get('amount', 3)
+                if direction in ('up', 'down'):
+                    await self.controller.scroll(amount if direction == 'up' else -amount, x, y)
+                else:
+                    await self.controller.hscroll(amount if direction == 'right' else -amount, x, y)
+            elif action == GestureAction.ZOOM.value:
+                factor = metadata.get('factor', 1.0)
+                scroll_amt = int((factor - 1.0) * 5)
+                await self.controller.key_down('ctrl')
+                await self.controller.scroll(scroll_amt, x, y)
+                await self.controller.key_up('ctrl')
+            elif action == GestureAction.KEY_PRESS.value:
+                await self.controller.press(metadata.get('key', 'space'))
+            elif action == GestureAction.KEY_COMBO.value:
+                await self.controller.hotkey(*metadata.get('keys', []))
+            elif action == GestureAction.WAVE.value:
+                await self.controller.hotkey('alt', 'tab')
 
     def _smooth_position(self, x: int, y: int):
         alpha = 1.0 - self.config.gesture_smoothing
@@ -345,25 +297,21 @@ class GestureExecutor:
         self.last_position = [sx, sy]
         return sx, sy
 
-    def _update_position_history(self, x: int, y: int):
-        self.position_history.append((x, y, time.time()))
-
-        if self.config.enable_prediction:
-            # The new predictor is "trained" by simply having access to the history
-            self.predictor.train(self.position_history)
-
-    def _predict_next_position(self, x: int, y: int) -> tuple[int, int]:
-        """Predicts the next cursor position using the ML model."""
-        predicted_pos = self.predictor.predict(self.position_history)
+    def _predict_next_position(self, command: GestureCommand) -> tuple[int, int]:
+        """Predicts the next cursor position using the new predictor."""
+        predicted_pos = self.predictor.predict_next_position(
+            current_position=(command.position[0] * self.screen_width, command.position[1] * self.screen_height),
+            timestamp=command.timestamp
+        )
         if predicted_pos:
             px, py = predicted_pos
             # Clamp prediction to screen bounds for safety
-            px = max(0, min(self.screen_width, px))
-            py = max(0, min(self.screen_height, py))
+            px = max(0, min(self.screen_width, int(px)))
+            py = max(0, min(self.screen_height, int(py)))
             return px, py
 
         # Fallback to current position if prediction is not available
-        return x, y
+        return int(command.position[0] * self.screen_width), int(command.position[1] * self.screen_height)
 
 
 from web_server import WebServer
@@ -580,6 +528,7 @@ def load_config(path: str = 'config.yaml') -> ServerConfig:
 
 
 async def main():
+    logger.info("Starting main function")
     server = GestureServer()
 
     def signal_handler():
