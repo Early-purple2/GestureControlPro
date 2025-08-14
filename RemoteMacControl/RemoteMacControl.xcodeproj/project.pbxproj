@@ -1,0 +1,208 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 55;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		2A0000080000000000000001 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000080000000000000002 /* APIService.swift */; };
+		2A0000080000000000000003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000080000000000000004 /* ContentView.swift */; };
+		2A0000080000000000000005 /* ServerDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000080000000000000006 /* ServerDashboardView.swift */; };
+		2A0000080000000000000007 /* iOSClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000080000000000000008 /* iOSClient.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		2A0000080000000000000009 /* RemoteMacControl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RemoteMacControl.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2A0000080000000000000002 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ../iOS/APIService.swift; sourceTree = "<group>"; };
+		2A0000080000000000000004 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ../iOS/ContentView.swift; sourceTree = "<group>"; };
+		2A0000080000000000000006 /* ServerDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ../iOS/ServerDashboardView.swift; sourceTree = "<group>"; };
+		2A0000080000000000000008 /* iOSClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ../iOS/iOSClient.swift; sourceTree = "<group>"; };
+		2A000008000000000000000A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		2A000008000000000000000B = {
+			isa = PBXGroup;
+			children = (
+				2A000008000000000000000C /* RemoteMacControl */,
+				2A000008000000000000000D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		2A000008000000000000000C /* RemoteMacControl */ = {
+			isa = PBXGroup;
+			children = (
+				2A0000080000000000000002 /* APIService.swift */,
+				2A0000080000000000000004 /* ContentView.swift */,
+				2A0000080000000000000006 /* ServerDashboardView.swift */,
+				2A0000080000000000000008 /* iOSClient.swift */,
+				2A000008000000000000000A /* Info.plist */,
+			);
+			path = RemoteMacControl;
+			sourceTree = "<group>";
+		};
+		2A000008000000000000000D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				2A0000080000000000000009 /* RemoteMacControl.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		2A000008000000000000000E /* RemoteMacControl */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2A000008000000000000000F /* Build configuration list for PBXNativeTarget "RemoteMacControl" */;
+			buildPhases = (
+				2A0000080000000000000010 /* Sources */,
+				2A0000080000000000000011 /* Frameworks */,
+				2A0000080000000000000012 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RemoteMacControl;
+			productName = RemoteMacControl;
+			productReference = 2A0000080000000000000009 /* RemoteMacControl.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		2A0000080000000000000013 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1300;
+			};
+			buildConfigurationList = 2A0000080000000000000014 /* Build configuration list for PBXProject "RemoteMacControl" */;
+			compatibilityVersion = "Xcode 13.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 2A000008000000000000000B;
+			productRefGroup = 2A000008000000000000000D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				2A000008000000000000000E /* RemoteMacControl */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		2A0000080000000000000010 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2A0000080000000000000001 /* APIService.swift in Sources */,
+				2A0000080000000000000003 /* ContentView.swift in Sources */,
+				2A0000080000000000000005 /* ServerDashboardView.swift in Sources */,
+				2A0000080000000000000007 /* iOSClient.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		2A0000080000000000000011 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXResourcesBuildPhase section */
+		2A0000080000000000000012 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		2A0000080000000000000015 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				INFOPLIST_FILE = RemoteMacControl/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.example.RemoteMacControl";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		2A0000080000000000000016 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				INFOPLIST_FILE = RemoteMacControl/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.example.RemoteMacControl";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		2A0000080000000000000017 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		2A0000080000000000000018 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2A000008000000000000000F /* Build configuration list for PBXNativeTarget "RemoteMacControl" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2A0000080000000000000015 /* Debug */,
+				2A0000080000000000000016 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		2A0000080000000000000014 /* Build configuration list for PBXProject "RemoteMacControl" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2A0000080000000000000017 /* Debug */,
+				2A0000080000000000000018 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 2A0000080000000000000013 /* Project object */;
+}
