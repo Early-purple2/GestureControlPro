@@ -2,30 +2,22 @@
 # Version optimisée pour performance maximale
 
 # Core dependencies
-asyncio-mqtt
 uvloop
 websockets
 pyautogui
 pyperclip
+aiohttp
+pyyaml
+numpy
+scikit-learn
+translators
 
 # Network & Communication
-aiohttp
 websocket-client
-requests
-
-# Performance & Monitoring
-psutil
-scipy
-
-# Logging & Configuration
-pyyaml
-python-dotenv
-colorama
 
 # Optional: Computer Vision (pour extensions futures)
 opencv-python
 mediapipe
-translators
 
 # Optional: Machine Learning (pour prédiction avancée)
 # tensorflow-lite is not available on PyPI for Python 3.12 on this platform yet.
@@ -37,7 +29,3 @@ pytest
 pytest-asyncio
 black
 flake8
-
-# ML
-scikit-learn
-numpy

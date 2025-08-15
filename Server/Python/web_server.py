@@ -1,7 +1,10 @@
 import asyncio
 import dataclasses
+import json
+import logging
 import time
 from typing import TYPE_CHECKING
+import yaml
 
 from aiohttp import web
 
@@ -9,7 +12,9 @@ from aiohttp import web
 # The main gesture_server module will import this web_server,
 # and this web_server needs type hints from gesture_server.
 if TYPE_CHECKING:
-    from .gesture_server import GestureServer, ServerConfig
+    from .gesture_server import GestureServer
+
+logger = logging.getLogger(__name__)
 
 GESTURE_SERVER_KEY = web.AppKey('gesture_server', "GestureServer")
 
@@ -75,17 +80,16 @@ class WebServer:
         stats = await self.gesture_server.performance_monitor.get_stats()
         status_data = {
             "status": "running" if self.gesture_server.running else "stopped",
-            "version": "1.0.0",  # Hardcoded for now, could be dynamic
+            "version": self.gesture_server.config.version,
             "uptime": time.time() - self.start_time,
             "performance": {
                 "commands_per_second": stats.get('commands_per_second'),
                 "avg_latency_ms": stats.get('avg_latency_ms'),
             },
             "connected_clients": {
-                 # This is a placeholder, real implementation would need tracking
                 "websocket": len(self.gesture_server.websocket_server.clients) if self.gesture_server.websocket_server else 0,
-                "tcp": 0, # Placeholder
-                "udp": "N/A"
+                "tcp": len(self.gesture_server.tcp_clients),
+                "udp": "N/A" # UDP is connectionless, so client count is not applicable
             }
         }
         return web.json_response(status_data)
@@ -97,24 +101,56 @@ class WebServer:
 
     async def put_config(self, request: web.Request):
         """
-        Updates server configuration in memory.
-        Note: This does not persist the changes to config.yaml yet.
+        Updates server configuration in memory and persists it to config.yaml.
         """
         try:
             data = await request.json()
+            current_config = self.gesture_server.config
+
+            # Update the config object in memory
             for key, value in data.items():
-                if hasattr(self.gesture_server.config, key):
-                    # Basic type checking/casting could be added here
-                    setattr(self.gesture_server.config, key, value)
+                if hasattr(current_config, key):
+                    setattr(current_config, key, value)
 
-            # Log the change
-            # logger.info(f"Configuration updated via API: {data}")
+            # Now, persist the entire current configuration back to the file
+            # Reconstruct the nested dictionary structure for the YAML file
+            config_to_save = {
+                'general': {
+                    'version': current_config.version
+                },
+                'network': {
+                    'websocket_port': current_config.websocket_port,
+                    'udp_port': current_config.udp_port,
+                    'tcp_port': current_config.tcp_port,
+                    'dashboard_port': current_config.dashboard_port,
+                    'host': current_config.host,
+                    'max_connections': current_config.max_connections,
+                    'buffer_size': current_config.buffer_size,
+                },
+                'performance': {
+                    'thread_pool_size': current_config.thread_pool_size,
+                    'enable_prediction': current_config.enable_prediction,
+                    'gesture_smoothing': current_config.gesture_smoothing,
+                    'performance_logging': current_config.performance_logging,
+                    'command_timeout': current_config.command_timeout,
+                    'heartbeat_interval': current_config.heartbeat_interval,
+                },
+                'security': {
+                    'secret_token': current_config.secret_token,
+                }
+            }
 
-            return web.json_response({"status": "ok", "message": "Config updated in memory."})
+            with open('config.yaml', 'w') as f:
+                yaml.dump(config_to_save, f, default_flow_style=False, sort_keys=False)
+
+            logger.info(f"Configuration updated and saved via API: {data}")
+
+            return web.json_response({"status": "ok", "message": "Config updated and saved."})
         except json.JSONDecodeError:
             return web.json_response({"status": "error", "message": "Invalid JSON format."}, status=400)
         except Exception as e:
-            return web.json_response({"status": "error", "message": str(e)}, status=500)
+            logger.error(f"Failed to update configuration: {e}", exc_info=True)
+            return web.json_response({"status": "error", "message": f"Failed to update config: {e}"}, status=500)
 
     async def get_metrics(self, request: web.Request):
         """Returns detailed performance metrics."""
