@@ -8,18 +8,14 @@ Supports WebSocket, UDP, and TCP with optimized threading.
 import asyncio
 import json
 import time
-import threading
 import logging
-from dataclasses import dataclass
-from typing import Dict, List, Any, Optional
-from enum import Enum
 import signal
 import sys
-import collections
 import socket
+import ssl
+from typing import Optional
 from concurrent.futures import ThreadPoolExecutor
 import yaml
-import numpy as np
 
 # High-performance event loop
 try:
@@ -28,10 +24,18 @@ try:
 except ImportError:
     pass
 
-# System control imports
 import websockets
 from websockets.asyncio.server import ServerConnection
 from websockets.exceptions import ConnectionClosed
+from aiohttp import web
+
+# Local core modules
+from core.models import ServerConfig, GestureCommand, TLSConfig
+from core.performance import PerformanceMonitor
+from core.controller import SystemController
+from core.executor import GestureExecutor
+from web_server import WebServer
+
 
 # Configure logging
 logging.basicConfig(
@@ -39,379 +43,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class ServerConfig:
-    """Server configuration with optimizations."""
-    # General
-    version: str = "1.0.0"
-
-    # Network
-    websocket_port: int = 8081
-    udp_port: int = 9090
-    tcp_port: int = 7070
-    dashboard_port: int = 8000
-    host: str = "0.0.0.0"
-    max_connections: int = 10
-    heartbeat_interval: float = 1.0
-    buffer_size: int = 8192
-
-    # Performance
-    command_timeout: float = 0.001  # 1ms max per command
-    thread_pool_size: int = 4
-    enable_prediction: bool = True
-    gesture_smoothing: float = 0.7
-    performance_logging: bool = True
-
-    # Security
-    secret_token: Optional[str] = None
-
-
-class GestureAction(Enum):
-    """Supported gesture actions."""
-    CLICK = "click"
-    DOUBLE_CLICK = "double_click"
-    DRAG_START = "drag_start"
-    DRAG_END = "drag_end"
-    SCROLL = "scroll"
-    ZOOM = "zoom"
-    MOVE = "move"
-    KEY_PRESS = "key_press"
-    KEY_COMBO = "key_combo"
-    TYPE_TEXT = "type_text"
-    MOVE_RELATIVE = "move_relative"
-    WAVE = "wave"
-    COPY = "copy"
-    PASTE = "paste"
-    TRANSLATE = "translate"
-
-
-@dataclass
-class GestureCommand:
-    """Gesture command with performance metadata."""
-    id: str
-    action: str
-    position: List[float]
-    timestamp: float
-    metadata: Dict[str, Any]
-
-    @classmethod
-    def from_json(cls, data: Dict) -> Optional['GestureCommand']:
-        try:
-            payload = data['payload']
-            return cls(
-                id=data['id'],
-                action=payload['action'],
-                position=payload.get('position', [0, 0]),
-                timestamp=data.get('timestamp', time.time()),
-                metadata=payload.get('metadata', {})
-            )
-        except (KeyError, TypeError) as e:
-            logger.error(f"Failed to parse GestureCommand: {e}")
-            return None
-
-
-class PerformanceMonitor:
-    """Real-time performance monitor."""
-    def __init__(self):
-        self.commands_processed = 0
-        self.total_latency = 0.0
-        self.max_latency = 0.0
-        self.min_latency = float('inf')
-        self.start_time = time.time()
-        self.lock = asyncio.Lock()
-
-    async def record_command(self, latency: float):
-        async with self.lock:
-            self.commands_processed += 1
-            self.total_latency += latency
-            self.max_latency = max(self.max_latency, latency)
-            self.min_latency = min(self.min_latency, latency)
-
-    async def get_stats(self) -> Dict[str, float]:
-        async with self.lock:
-            if self.commands_processed == 0:
-                return {
-                    'commands_per_second': 0.0,
-                    'avg_latency_ms': 0.0,
-                    'max_latency_ms': 0.0,
-                    'min_latency_ms': 0.0
-                }
-            elapsed = time.time() - self.start_time
-            return {
-                'commands_per_second': self.commands_processed / elapsed,
-                'avg_latency_ms': (self.total_latency / self.commands_processed) * 1000,
-                'max_latency_ms': self.max_latency * 1000,
-                'min_latency_ms': (self.min_latency if self.min_latency != float('inf') else 0.0) * 1000
-            }
-
-
-class SystemController:
-    """Abstracts system control actions to allow for testability."""
-    def __init__(self, thread_pool: ThreadPoolExecutor):
-        self.thread_pool = thread_pool
-        self.loop = asyncio.get_running_loop()
-
-        # Check if we are in a headless environment
-        import os
-        if 'DISPLAY' in os.environ:
-            import pyautogui
-            self.pyautogui = pyautogui
-            self.pyautogui.FAILSAFE = False
-            self.pyautogui.PAUSE = 0.001
-            try:
-                import pyperclip
-                self.pyperclip = pyperclip
-            except ImportError:
-                from unittest.mock import MagicMock
-                self.pyperclip = MagicMock()
-            try:
-                import translators as ts
-                self.translators = ts
-            except ImportError:
-                from unittest.mock import MagicMock
-                self.translators = MagicMock()
-        else:
-            # Use a mock pyautogui if no display is available
-            from unittest.mock import MagicMock
-            self.pyautogui = MagicMock()
-            self.pyautogui.size.return_value = (1920, 1080)
-            self.pyperclip = MagicMock()
-            self.translators = MagicMock()
-
-    async def execute(self, func, *args):
-        return await self.loop.run_in_executor(self.thread_pool, func, *args)
-
-    async def click(self, x, y, button):
-        await self.execute(self.pyautogui.click, x, y, button=button)
-
-    async def double_click(self, x, y, button):
-        await self.execute(self.pyautogui.doubleClick, x, y, button=button)
-
-    async def drag_to(self, x, y, duration):
-        await self.execute(self.pyautogui.dragTo, x, y, duration)
-
-    async def scroll(self, amount, x, y):
-        await self.execute(self.pyautogui.scroll, amount, x, y)
-
-    async def hscroll(self, amount, x, y):
-        await self.execute(self.pyautogui.hscroll, amount, x, y)
-
-    async def key_down(self, key):
-        await self.execute(self.pyautogui.keyDown, key)
-
-    async def key_up(self, key):
-        await self.execute(self.pyautogui.keyUp, key)
-
-    async def mouse_down(self, x: int, y: int, button: str):
-        await self.execute(self.pyautogui.mouseDown, x, y, button=button)
-
-    async def mouse_up(self, x: int, y: int, button: str):
-        await self.execute(self.pyautogui.mouseUp, x, y, button=button)
-
-    async def move_to(self, x, y, duration):
-        await self.execute(self.pyautogui.moveTo, x, y, duration=duration)
-
-    async def move_relative(self, dx: int, dy: int):
-        await self.execute(self.pyautogui.move, dx, dy)
-
-    async def press(self, key):
-        await self.execute(self.pyautogui.press, key)
-
-    async def hotkey(self, *keys):
-        await self.execute(self.pyautogui.hotkey, *keys)
-
-    async def type_string(self, text: str):
-        await self.execute(self.pyautogui.typewrite, text)
-
-    def size(self):
-        return self.pyautogui.size()
-
-    async def copy_to_clipboard(self, text: str):
-        await self.execute(self.pyperclip.copy, text)
-
-    async def paste_from_clipboard(self):
-        if sys.platform == 'darwin':
-            await self.hotkey('cmd', 'v')
-        else:
-            await self.hotkey('ctrl', 'v')
-
-    async def copy_selection_to_clipboard(self):
-        if sys.platform == 'darwin':
-            await self.hotkey('cmd', 'c')
-        else:
-            await self.hotkey('ctrl', 'c')
-
-    async def read_clipboard(self):
-        return await self.execute(self.pyperclip.paste)
-
-    async def translate(self, text: str, to_language='en'):
-        return await self.execute(self.translators.translate_text, text, to_language=to_language)
-
-
-from trajectory_predictor import TrajectoryPredictor
-
-
-class GestureExecutor:
-    """Fast gesture executor with prediction and command queuing."""
-    def __init__(self, config: ServerConfig, performance_monitor: PerformanceMonitor, controller: SystemController):
-        self.config = config
-        self.performance_monitor = performance_monitor
-        self.controller = controller
-
-        self.screen_width, self.screen_height = self.controller.size()
-        self.predictor = TrajectoryPredictor(self.screen_width, self.screen_height)
-
-        self.last_position = [0, 0]
-        self.is_dragging = False
-        self.command_queue = asyncio.Queue(maxsize=100)
-        self.worker_task = asyncio.create_task(self._command_worker())
-
-        logger.info(f"🖥️ Screen resolution: {self.screen_width}x{self.screen_height}")
-        if self.config.enable_prediction:
-            logger.info("🤖 Trajectory prediction enabled.")
-
-    async def submit_command(self, command: GestureCommand):
-        """Submits a command to the execution queue."""
-        try:
-            self.command_queue.put_nowait(command)
-        except asyncio.QueueFull:
-            logger.warning("Command queue is full, dropping command.")
-
-    async def _command_worker(self):
-        """Processes commands from the queue one by one."""
-        logger.info("Gesture executor worker started.")
-        while True:
-            command = await self.command_queue.get()
-            start_time = time.time()
-            try:
-                await self._execute_command_internal(command)
-            except Exception as e:
-                logger.error(f"❌ Error executing command {command.id}: {e}", exc_info=True)
-            finally:
-                latency = time.time() - start_time
-                if self.config.performance_logging:
-                    logger.debug(f"⚡ Command {command.id} processed in {latency*1000:.2f}ms")
-                await self.performance_monitor.record_command(latency)
-                self.command_queue.task_done()
-
-    async def _execute_command_internal(self, command: GestureCommand):
-        # This method now only does the coordinate conversion and clamping.
-        # Smoothing and prediction are handled in _execute_action.
-        abs_x = int(command.position[0] * self.screen_width)
-        abs_y = int(command.position[1] * self.screen_height)
-
-        abs_x = max(0, min(self.screen_width, abs_x))
-        abs_y = max(0, min(self.screen_height, abs_y))
-
-        await self._execute_action(command, abs_x, abs_y)
-
-
-    async def _execute_action(self, command: GestureCommand, x: int, y: int):
-        action = command.action
-        metadata = command.metadata
-
-        if action == GestureAction.MOVE_RELATIVE.value:
-            dx = int(metadata.get('dx', 0))
-            dy = int(metadata.get('dy', 0))
-            await self.controller.move_relative(dx, dy)
-            return
-
-        if action == GestureAction.MOVE.value:
-            if self.config.enable_prediction:
-                x, y = self._predict_next_position(command)
-
-            if self.config.gesture_smoothing > 0:
-                x, y = self._smooth_position(x, y)
-
-            await self.controller.move_to(x, y, 0.001)
-        else:
-            # Apply smoothing for all other actions
-            if self.config.gesture_smoothing > 0:
-                x, y = self._smooth_position(x, y)
-
-            if action == GestureAction.CLICK.value:
-                await self.controller.click(x, y, metadata.get('button', 'left'))
-            elif action == GestureAction.DOUBLE_CLICK.value:
-                await self.controller.double_click(x, y, metadata.get('button', 'left'))
-            elif action == GestureAction.DRAG_START.value:
-                if not self.is_dragging:
-                    logger.info(f"Drag Start at ({x}, {y})")
-                    self.is_dragging = True
-                    # Use a default button if not specified
-                    button = metadata.get('button', 'left')
-                    await self.controller.mouse_down(x, y, button)
-            elif action == GestureAction.DRAG_END.value:
-                if self.is_dragging:
-                    logger.info(f"Drag End at ({x}, {y})")
-                    self.is_dragging = False
-                    # Use a default button if not specified
-                    button = metadata.get('button', 'left')
-                    await self.controller.mouse_up(x, y, button)
-            elif action == GestureAction.SCROLL.value:
-                direction = metadata.get('direction', 'up')
-                amount = metadata.get('amount', 3)
-                if direction in ('up', 'down'):
-                    await self.controller.scroll(amount if direction == 'up' else -amount, x, y)
-                else:
-                    await self.controller.hscroll(amount if direction == 'right' else -amount, x, y)
-            elif action == GestureAction.ZOOM.value:
-                factor = metadata.get('factor', 1.0)
-                scroll_amt = int((factor - 1.0) * 5)
-                await self.controller.key_down('ctrl')
-                await self.controller.scroll(scroll_amt, x, y)
-                await self.controller.key_up('ctrl')
-            elif action == GestureAction.KEY_PRESS.value:
-                await self.controller.press(metadata.get('key', 'space'))
-            elif action == GestureAction.KEY_COMBO.value:
-                await self.controller.hotkey(*metadata.get('keys', []))
-            elif action == GestureAction.TYPE_TEXT.value:
-                await self.controller.type_string(metadata.get('text', ''))
-            elif action == GestureAction.WAVE.value:
-                await self.controller.hotkey('alt', 'tab')
-            elif action == GestureAction.COPY.value:
-                await self.controller.copy_selection_to_clipboard()
-            elif action == GestureAction.PASTE.value:
-                text_to_paste = metadata.get('text', '')
-                if text_to_paste:
-                    await self.controller.copy_to_clipboard(text_to_paste)
-                    await self.controller.paste_from_clipboard()
-            elif action == GestureAction.TRANSLATE.value:
-                await self.controller.copy_selection_to_clipboard()
-                await asyncio.sleep(0.1) # Give time for clipboard to update
-                text_to_translate = await self.controller.read_clipboard()
-                if text_to_translate:
-                    translated_text = await self.controller.translate(text_to_translate)
-                    await self.controller.copy_to_clipboard(translated_text)
-                    await self.controller.paste_from_clipboard()
-
-    def _smooth_position(self, x: int, y: int):
-        alpha = 1.0 - self.config.gesture_smoothing
-        sx = int(alpha * x + (1 - alpha) * self.last_position[0])
-        sy = int(alpha * y + (1 - alpha) * self.last_position[1])
-        self.last_position = [sx, sy]
-        return sx, sy
-
-    def _predict_next_position(self, command: GestureCommand) -> tuple[int, int]:
-        """Predicts the next cursor position using the new predictor."""
-        predicted_pos = self.predictor.predict_next_position(
-            current_position=(command.position[0] * self.screen_width, command.position[1] * self.screen_height),
-            timestamp=command.timestamp
-        )
-        if predicted_pos:
-            px, py = predicted_pos
-            # Clamp prediction to screen bounds for safety
-            px = max(0, min(self.screen_width, int(px)))
-            py = max(0, min(self.screen_height, int(py)))
-            return px, py
-
-        # Fallback to current position if prediction is not available
-        return int(command.position[0] * self.screen_width), int(command.position[1] * self.screen_height)
-
-
-from web_server import WebServer
-from aiohttp import web
 
 
 class GestureServer:
@@ -436,6 +67,18 @@ class GestureServer:
 
     async def start(self):
         self.running = True
+        ssl_context = None
+
+        if self.config.tls.enabled:
+            try:
+                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                ssl_context.load_cert_chain(self.config.tls.cert_path, self.config.tls.key_path)
+                logger.info("🔒 TLS is enabled. Servers will use wss:// and secure TCP.")
+            except (FileNotFoundError, ssl.SSLError) as e:
+                logger.error(f"❌ Failed to load TLS certificates: {e}. Disabling TLS.")
+                ssl_context = None
+        else:
+            logger.warning("⚠️ TLS is disabled. Communication will be unencrypted.")
 
         # Setup and start the web server runner
         self.web_runner = web.AppRunner(self.web_server.app)
@@ -443,9 +86,9 @@ class GestureServer:
         web_site = web.TCPSite(self.web_runner, self.config.host, self.config.dashboard_port)
 
         tasks = [
-            self._start_websocket(),
+            self._start_websocket(ssl_context),
             self._start_udp(),
-            self._start_tcp(),
+            self._start_tcp(ssl_context),
             web_site.start(),
             self._performance_logger()
         ]
@@ -474,7 +117,7 @@ class GestureServer:
         self.thread_pool.shutdown(wait=False)
         logger.info("✅ Servers stopped.")
 
-    async def _start_websocket(self):
+    async def _start_websocket(self, ssl_context: Optional[ssl.SSLContext] = None):
         async def handler(websocket):
             """Handles an incoming WebSocket connection, including authentication."""
             # --- Authentication Check ---
@@ -508,6 +151,7 @@ class GestureServer:
 
         self.websocket_server = await websockets.serve(
             handler, self.config.host, self.config.websocket_port,
+            ssl=ssl_context,
             max_size=self.config.buffer_size,
             compression=None,  # Compression disabled for lower latency
             max_queue=32,      # Limit queue size to prevent backpressure
@@ -515,7 +159,8 @@ class GestureServer:
             # Pass the token as a subprotocol for the client to use
             subprotocols=["token", self.config.secret_token] if self.config.secret_token else None
         )
-        logger.info(f"🌐 WebSocket server listening on {self.config.host}:{self.config.websocket_port}")
+        protocol = "wss" if ssl_context else "ws"
+        logger.info(f"🌐 WebSocket server ({protocol}) listening on {self.config.host}:{self.config.websocket_port}")
 
     async def _start_udp(self):
         class UDPProtocol(asyncio.DatagramProtocol):
@@ -535,7 +180,7 @@ class GestureServer:
         )
         logger.info(f"📡 UDP server listening on {self.config.host}:{self.config.udp_port}")
 
-    async def _start_tcp(self):
+    async def _start_tcp(self, ssl_context: Optional[ssl.SSLContext] = None):
         async def handler(reader, writer):
             addr = writer.get_extra_info('peername')
             logger.info(f"🔗 TCP connected from {addr}")
@@ -556,9 +201,11 @@ class GestureServer:
                 writer.close()
 
         self.tcp_server = await asyncio.start_server(
-            handler, self.config.host, self.config.tcp_port
+            handler, self.config.host, self.config.tcp_port,
+            ssl=ssl_context
         )
-        logger.info(f"🔌 TCP server listening on {self.config.host}:{self.config.tcp_port}")
+        protocol = "Secure TCP" if ssl_context else "TCP"
+        logger.info(f"🔌 {protocol} server listening on {self.config.host}:{self.config.tcp_port}")
 
     async def _process_message(self, raw_data: bytes, ws: Optional[ServerConnection] = None):
         try:
@@ -608,6 +255,11 @@ def load_config(path: str = 'config.yaml') -> ServerConfig:
         },
         'security': {
             'secret_token': None,
+            'tls': {
+                'enabled': False,
+                'cert_path': 'certs/cert.pem',
+                'key_path': 'certs/key.pem',
+            }
         }
     }
     try:
@@ -618,18 +270,45 @@ def load_config(path: str = 'config.yaml') -> ServerConfig:
         general_settings = {**defaults['general'], **user_config.get('general', {})}
         network_settings = {**defaults['network'], **user_config.get('network', {})}
         performance_settings = {**defaults['performance'], **user_config.get('performance', {})}
-        security_settings = {**defaults['security'], **user_config.get('security', {})}
+
+        # Special handling for nested security settings
+        security_defaults = defaults['security']
+        user_security = user_config.get('security', {})
+        tls_defaults = security_defaults['tls']
+        user_tls = user_security.get('tls', {})
+
+        tls_config = TLSConfig(
+            enabled=user_tls.get('enabled', tls_defaults['enabled']),
+            cert_path=user_tls.get('cert_path', tls_defaults['cert_path']),
+            key_path=user_tls.get('key_path', tls_defaults['key_path']),
+        )
+
+        security_settings = {
+            'secret_token': user_security.get('secret_token', security_defaults['secret_token']),
+            'tls': tls_config
+        }
 
         logger.info(f"✅ Configuration loaded from '{path}'")
-        return ServerConfig(**general_settings, **network_settings, **performance_settings, **security_settings)
+        return ServerConfig(
+            **general_settings,
+            **network_settings,
+            **performance_settings,
+            **security_settings
+        )
 
     except FileNotFoundError:
         logger.warning(f"⚠️ Config file '{path}' not found. Using default configuration.")
     except (yaml.YAMLError, TypeError) as e:
         logger.error(f"❌ Error parsing YAML in '{path}': {e}. Using default configuration.")
 
-    # Combine all default dictionaries for the final fallback
-    return ServerConfig(**defaults['general'], **defaults['network'], **defaults['performance'], **defaults['security'])
+    # This part is for when the file is not found or invalid
+    return ServerConfig(
+        **defaults['general'],
+        **defaults['network'],
+        **defaults['performance'],
+        secret_token=defaults['security']['secret_token'],
+        tls=TLSConfig(**defaults['security']['tls'])
+    )
 
 
 async def main():

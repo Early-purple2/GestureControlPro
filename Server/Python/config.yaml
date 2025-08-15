@@ -26,6 +26,12 @@ security:
   # IMPORTANT: Change this to a long, random string in a real deployment.
   secret_token: "DEFAULT_SECRET_TOKEN_CHANGE_ME"
 
+  # TLS (SSL) settings for enabling wss:// and secure TCP
+  tls:
+    enabled: false
+    cert_path: "certs/cert.pem"
+    key_path: "certs/key.pem"
+
 # Note: The following settings from the README are illustrative
 # and are not used by the current version of the server, but are kept for future compatibility.
 # gestures:

@@ -4,7 +4,10 @@ import asyncio
 import time
 from unittest.mock import AsyncMock
 
-from gesture_server import GestureExecutor, GestureCommand, ServerConfig, PerformanceMonitor, SystemController
+from core.executor import GestureExecutor
+from core.models import GestureCommand, ServerConfig
+from core.performance import PerformanceMonitor
+from core.controller import SystemController
 
 # Pytest needs to know this is an async test file
 pytestmark = pytest.mark.asyncio
