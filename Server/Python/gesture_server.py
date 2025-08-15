@@ -20,7 +20,6 @@ import socket
 from concurrent.futures import ThreadPoolExecutor
 import yaml
 import numpy as np
-from sklearn.linear_model import LinearRegression
 
 # High-performance event loop
 try:
@@ -45,18 +44,27 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ServerConfig:
     """Server configuration with optimizations."""
+    # General
+    version: str = "1.0.0"
+
+    # Network
     websocket_port: int = 8081
     udp_port: int = 9090
     tcp_port: int = 7070
+    dashboard_port: int = 8000
     host: str = "0.0.0.0"
     max_connections: int = 10
     heartbeat_interval: float = 1.0
-    command_timeout: float = 0.001  # 1ms max per command
     buffer_size: int = 8192
+
+    # Performance
+    command_timeout: float = 0.001  # 1ms max per command
     thread_pool_size: int = 4
     enable_prediction: bool = True
     gesture_smoothing: float = 0.7
     performance_logging: bool = True
+
+    # Security
     secret_token: Optional[str] = None
 
 
@@ -419,6 +427,7 @@ class GestureServer:
         self.websocket_server = None
         self.udp_transport = None
         self.tcp_server = None
+        self.tcp_clients = set()
         self.web_runner = None
         self.running = False
 
@@ -431,7 +440,7 @@ class GestureServer:
         # Setup and start the web server runner
         self.web_runner = web.AppRunner(self.web_server.app)
         await self.web_runner.setup()
-        web_site = web.TCPSite(self.web_runner, self.config.host, 8000) # Hardcode port 8000 for dashboard
+        web_site = web.TCPSite(self.web_runner, self.config.host, self.config.dashboard_port)
 
         tasks = [
             self._start_websocket(),
@@ -440,7 +449,7 @@ class GestureServer:
             web_site.start(),
             self._performance_logger()
         ]
-        logger.info("✅ All servers started (including web server on port 8000)")
+        logger.info(f"✅ All servers started (including web server on port {self.config.dashboard_port})")
         await asyncio.gather(*tasks)
 
     async def stop(self):
@@ -530,6 +539,7 @@ class GestureServer:
         async def handler(reader, writer):
             addr = writer.get_extra_info('peername')
             logger.info(f"🔗 TCP connected from {addr}")
+            self.tcp_clients.add(writer)
             try:
                 while True:
                     data = await reader.read(self.config.buffer_size)
@@ -542,6 +552,7 @@ class GestureServer:
                 logger.error(f"❌ TCP Error from {addr}: {e}")
             finally:
                 logger.info(f"🔌 TCP disconnected from {addr}")
+                self.tcp_clients.remove(writer)
                 writer.close()
 
         self.tcp_server = await asyncio.start_server(
@@ -583,9 +594,13 @@ class GestureServer:
 def load_config(path: str = 'config.yaml') -> ServerConfig:
     """Loads configuration from a YAML file, with fallback to defaults."""
     defaults = {
+        'general': {
+            'version': '1.0.0',
+        },
         'network': {
             'websocket_port': 8080, 'udp_port': 9090, 'tcp_port': 7070,
-            'host': "0.0.0.0", 'max_connections': 10, 'buffer_size': 8192,
+            'dashboard_port': 8000, 'host': "0.0.0.0", 'max_connections': 10,
+            'buffer_size': 8192,
         },
         'performance': {
             'thread_pool_size': 4, 'enable_prediction': True, 'gesture_smoothing': 0.7,
@@ -600,12 +615,13 @@ def load_config(path: str = 'config.yaml') -> ServerConfig:
             user_config = yaml.safe_load(f) or {}
 
         # Deep merge user config with defaults
+        general_settings = {**defaults['general'], **user_config.get('general', {})}
         network_settings = {**defaults['network'], **user_config.get('network', {})}
         performance_settings = {**defaults['performance'], **user_config.get('performance', {})}
         security_settings = {**defaults['security'], **user_config.get('security', {})}
 
         logger.info(f"✅ Configuration loaded from '{path}'")
-        return ServerConfig(**network_settings, **performance_settings, **security_settings)
+        return ServerConfig(**general_settings, **network_settings, **performance_settings, **security_settings)
 
     except FileNotFoundError:
         logger.warning(f"⚠️ Config file '{path}' not found. Using default configuration.")
@@ -613,7 +629,7 @@ def load_config(path: str = 'config.yaml') -> ServerConfig:
         logger.error(f"❌ Error parsing YAML in '{path}': {e}. Using default configuration.")
 
     # Combine all default dictionaries for the final fallback
-    return ServerConfig(**defaults['network'], **defaults['performance'], **defaults['security'])
+    return ServerConfig(**defaults['general'], **defaults['network'], **defaults['performance'], **defaults['security'])
 
 
 async def main():

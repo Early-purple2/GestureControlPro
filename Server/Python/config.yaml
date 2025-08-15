@@ -1,10 +1,14 @@
 # Default configuration for GestureControlPro Server
 # This file allows for easy customization of server settings.
 
+general:
+  version: "1.0.0"
+
 network:
   websocket_port: 8081
   udp_port: 9090
   tcp_port: 7070
+  dashboard_port: 8000
   host: "0.0.0.0"
   max_connections: 10
   buffer_size: 8192
