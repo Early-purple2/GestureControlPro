@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gesture Control Prototype</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        h1 { color: #ffffff; }
+        #container { position: relative; width: 640px; height: 480px; border: 2px solid #333; }
+        #webcam { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #status { margin-top: 20px; font-size: 1.2em; color: #f5a623; }
+    </style>
+</head>
+<body>
+    <h1>Gesture Control Prototype</h1>
+    <div id="container">
+        <video id="webcam" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+    </div>
+    <div id="status">Loading Model...</div>
+
+    <script type="module">
+        // Import necessary libraries from CDN
+        import 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.20.0/dist/tf-core.min.js';
+        import 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.20.0/dist/tf-backend-webgl.min.js';
+        import * as handPoseDetection from 'https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection@2.0.1/dist/hand-pose-detection.min.js';
+
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const statusDiv = document.getElementById('status');
+
+        let model;
+
+        // --- Drawing Utilities ---
+        function drawHands(hands) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            hands.forEach(hand => {
+                // Draw keypoints
+                ctx.fillStyle = 'red';
+                for (const keypoint of hand.keypoints) {
+                    ctx.beginPath();
+                    ctx.arc(keypoint.x, keypoint.y, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+
+                // Draw skeleton
+                const connections = handPoseDetection.util.getFingerprint(hand.keypoints);
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                for (const connection of connections) {
+                    const start = connection[0];
+                    const end = connection[1];
+                    ctx.beginPath();
+                    ctx.moveTo(start.x, start.y);
+                    ctx.lineTo(end.x, end.y);
+                    ctx.stroke();
+                }
+            });
+        }
+
+        // --- Main Application Logic ---
+        async function setupWebcam() {
+            return new Promise((resolve, reject) => {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => {
+                        video.srcObject = stream;
+                        video.addEventListener('loadeddata', () => {
+                            resolve(video);
+                        });
+                    })
+                    .catch(err => {
+                        reject(err);
+                    });
+            });
+        }
+
+        async function detectHands() {
+            // Get predictions
+            const hands = await model.estimateHands(video, { flipHorizontal: false });
+
+            if (hands.length > 0) {
+                statusDiv.textContent = `Hand(s) Detected: ${hands.length}`;
+                statusDiv.style.color = '#42b72a'; // Green
+                drawHands(hands);
+            } else {
+                statusDiv.textContent = 'No hands detected.';
+                statusDiv.style.color = '#f5a623'; // Orange
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+
+            // Loop
+            requestAnimationFrame(detectHands);
+        }
+
+        async function main() {
+            try {
+                statusDiv.textContent = 'Loading Hand Pose Detection model...';
+                model = await handPoseDetection.createDetector(
+                    handPoseDetection.SupportedModels.MediaPipeHands,
+                    {
+                        runtime: 'tfjs',
+                        modelType: 'lite', // 'lite' is faster, 'full' is more accurate
+                        maxHands: 2,
+                    }
+                );
+
+                statusDiv.textContent = 'Requesting webcam access...';
+                await setupWebcam();
+
+                // Set canvas dimensions to match video
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                statusDiv.textContent = 'Ready! Detecting hands...';
+                statusDiv.style.color = '#42b72a';
+
+                detectHands();
+
+            } catch (error) {
+                console.error(error);
+                statusDiv.textContent = `Error: ${error.message}`;
+                statusDiv.style.color = '#fa3e3e'; // Red
+            }
+        }
+
+        main();
+    </script>
+</body>
+</html>

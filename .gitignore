@@ -25,4 +25,7 @@ dist/
 server_output.log
 
 # Node.js
-/Server/Node.js/node_modules
+/node_modules
+
+# Python Virtual Env
+.venv/

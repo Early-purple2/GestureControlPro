@@ -65,6 +65,7 @@ class WebServer:
 
     def _setup_routes(self):
         self.app.router.add_get("/", self.index)
+        self.app.router.add_get("/gesture", self.gesture_control)
         self.app.router.add_get("/api/v1/status", self.get_status)
         self.app.router.add_get("/api/v1/config", self.get_config)
         self.app.router.add_put("/api/v1/config", self.put_config)
@@ -74,6 +75,10 @@ class WebServer:
         """Serves the main dashboard HTML file."""
         # The path is relative to where the server is run, which is Server/Python
         return web.FileResponse('./index.html')
+
+    async def gesture_control(self, request: web.Request):
+        """Serves the gesture control prototype HTML file."""
+        return web.FileResponse('./gesture_control.html')
 
     async def get_status(self, request: web.Request):
         """Provides the current high-level status of the server."""
