@@ -5,7 +5,9 @@ import json
 import websockets
 from unittest.mock import patch, AsyncMock, MagicMock
 
-from gesture_server import GestureServer, ServerConfig, SystemController
+from gesture_server import GestureServer
+from core.models import ServerConfig
+from core.controller import SystemController
 
 pytestmark = pytest.mark.asyncio
 

@@ -1,7 +1,7 @@
 import unittest
 import time
 
-from trajectory_predictor import TrajectoryPredictor
+from core.predictor import TrajectoryPredictor
 
 class TestTrajectoryPredictor(unittest.TestCase):
 

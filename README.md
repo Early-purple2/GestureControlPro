@@ -44,7 +44,7 @@ GestureControlPro/
 â”‚   â”œâ”€â”€ gesture_server.py                   # Main server
 â”‚   â”œâ”€â”€ web_server.py                       # Web server for monitoring API
 â”‚   â”œâ”€â”€ index.html                          # Monitoring dashboard page
-â”‚   â”œâ”€â”€ requirements.txt                    # Python dependencies
+â”‚   â”œâ”€â”€ pyproject.toml                    # Python dependencies (Poetry)
 â”‚   â””â”€â”€ tests/                              # Pytest test suite
 â”œâ”€â”€ ðŸ“š Documentation/                       # Complete Guides
 â””â”€â”€ ðŸ”§ Scripts/                            # Deployment Scripts
@@ -68,6 +68,7 @@ GestureControlPro/
 
 #### Serveur PC (Windows/Linux/macOS)
 - **Python 3.11+**
+- **Poetry** (gestionnaire de dÃ©pendances)
 - **PyAutoGUI** avec permissions d'accessibilitÃ©
 - **Connexion rÃ©seau** stable (WiFi 6 recommandÃ©)
 
@@ -90,17 +91,19 @@ swift build -c release --arch arm64
 #### 2. Installation Serveur Python
 
 ```bash
-# Environnement virtuel
-python3 -m venv venv
-source venv/bin/activate  # Linux/macOS
-# ou
-venv\Scripts\activate     # Windows
+# Installer Poetry (si ce n'est pas dÃ©jÃ  fait)
+# https://python-poetry.org/docs/#installation
+curl -sSL https://install.python-poetry.org | python3 -
 
-# Installation des dÃ©pendances
-pip install -r Server/Python/requirements.txt
+# Se dÃ©placer dans le rÃ©pertoire du serveur
+cd Server/Python
+
+# Installer les dÃ©pendances avec Poetry
+# Poetry crÃ©era et gÃ©rera automatiquement un environnement virtuel
+poetry install
 
 # Configuration des permissions (macOS)
-sudo python -c "import pyautogui; print('Permissions configurÃ©es')"
+poetry run sudo python -c "import pyautogui; print('Permissions configurÃ©es')"
 ```
 
 #### 3. DÃ©marrage du SystÃ¨me

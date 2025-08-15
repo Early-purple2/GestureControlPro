@@ -8,3 +8,6 @@ __pycache__/
 # Ignore testing artifacts
 .pytest_cache/
 .coverage
+
+# Ignore security certificates
+certs/
