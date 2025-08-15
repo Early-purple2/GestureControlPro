@@ -4,7 +4,8 @@ version = "1.0.0"
 description = "Python server for GestureControlPro"
 authors = ["Jules"]
 license = "MIT"
-readme = "README.md"
+readme = "../../README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.11"
