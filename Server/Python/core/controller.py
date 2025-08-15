@@ -1,6 +1,7 @@
 import asyncio
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from .platform_controllers import get_platform_controller
 
 
 class SystemController:
@@ -35,6 +36,8 @@ class SystemController:
             self.pyautogui.size.return_value = (1920, 1080)
             self.pyperclip = MagicMock()
             self.translators = MagicMock()
+
+        self.platform_controller = get_platform_controller(self.pyautogui)
 
     async def execute(self, func, *args):
         return await self.loop.run_in_executor(self.thread_pool, func, *args)
@@ -88,16 +91,10 @@ class SystemController:
         await self.execute(self.pyperclip.copy, text)
 
     async def paste_from_clipboard(self):
-        if sys.platform == 'darwin':
-            await self.hotkey('cmd', 'v')
-        else:
-            await self.hotkey('ctrl', 'v')
+        await self.execute(self.platform_controller.paste)
 
     async def copy_selection_to_clipboard(self):
-        if sys.platform == 'darwin':
-            await self.hotkey('cmd', 'c')
-        else:
-            await self.hotkey('ctrl', 'c')
+        await self.execute(self.platform_controller.copy)
 
     async def read_clipboard(self):
         return await self.execute(self.pyperclip.paste)
