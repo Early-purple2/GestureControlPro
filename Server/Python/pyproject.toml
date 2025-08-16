@@ -18,7 +18,6 @@ pyyaml = "^6.0.2"
 numpy = "^2.3.2"
 scikit-learn = "^1.7.1"
 translators = "^6.0.1"
-websocket-client = "^1.8.0"
 pydantic = "^2.7.1"
 
 [tool.poetry.group.dev.dependencies]
