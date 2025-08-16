@@ -30,7 +30,7 @@ from websockets.exceptions import ConnectionClosed
 from aiohttp import web
 
 # Local core modules
-from core.models import ServerConfig, GestureCommand, TLSConfig
+from core.models import ServerConfig, GestureCommand, TLSConfig, TranslateCommand
 from core.performance import PerformanceMonitor
 from core.controller import SystemController
 from core.executor import GestureExecutor
@@ -216,7 +216,16 @@ class GestureServer:
                     await self.executor.submit_command(command)
                 elif ws:
                     await ws.send(json.dumps({"error": "Invalid command format", "id": data.get("id")}))
-            # Other message types (heartbeat, status...) can be handled here
+            elif data.get('type') == 'translate_command':
+                command = TranslateCommand.from_json(data)
+                if command:
+                    translated_text = await self.executor.controller.translate(
+                        command.text, command.to_language
+                    )
+                    if translated_text:
+                        await self.executor.controller.type_string(translated_text)
+                elif ws:
+                    await ws.send(json.dumps({"error": "Invalid translate command format", "id": data.get("id")}))
         except json.JSONDecodeError:
             logger.error("❌ JSON decoding error")
             if ws:

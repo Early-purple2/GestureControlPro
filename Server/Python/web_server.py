@@ -70,6 +70,39 @@ class WebServer:
         self.app.router.add_get("/api/v1/config", self.get_config)
         self.app.router.add_put("/api/v1/config", self.put_config)
         self.app.router.add_get("/api/v1/metrics", self.get_metrics)
+        self.app.router.add_post("/api/v1/translate", self.translate)
+
+    async def translate(self, request: web.Request):
+        """Translates text using the SystemController."""
+        try:
+            data = await request.json()
+            text = data.get('text')
+            to_language = data.get('to_language', 'en')
+
+            if not text:
+                return web.json_response(
+                    {"status": "error", "message": "'text' field is required"},
+                    status=400
+                )
+
+            # Access the controller via the gesture_server instance
+            controller = self.gesture_server.executor.controller
+            translated_text = await controller.translate(text, to_language)
+
+            return web.json_response(
+                {"status": "ok", "translated_text": translated_text}
+            )
+        except json.JSONDecodeError:
+            return web.json_response(
+                {"status": "error", "message": "Invalid JSON format"},
+                status=400
+            )
+        except Exception as e:
+            logger.error(f"Translation failed: {e}", exc_info=True)
+            return web.json_response(
+                {"status": "error", "message": f"Translation failed: {e}"},
+                status=500
+            )
 
     async def index(self, request: web.Request):
         """Serves the main dashboard HTML file."""

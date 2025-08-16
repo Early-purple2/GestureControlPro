@@ -243,7 +243,7 @@ extension Array where Element == HandLandmark {
 ```json
 {
   "id": "uuid-v4",
-  "type": "gesture_command|heartbeat|status|configuration",
+  "type": "gesture_command|translate_command|heartbeat|status|configuration",
   "payload": "base64-encoded-data",
   "timestamp": 1640995200.123,
   "priority": 0-3
@@ -269,6 +269,18 @@ extension Array where Element == HandLandmark {
   "payload": "",
   "timestamp": 1640995201.456,
   "priority": 1
+}
+
+// Commande de traduction
+{
+  "id": "550e8400-e29b-41d4-a716-446655440002",
+  "type": "translate_command",
+  "payload": {
+    "text": "Hello",
+    "to_language": "fr"
+  },
+  "timestamp": 1640995202.789,
+  "priority": 2
 }
 ```
 
@@ -426,6 +438,27 @@ POST /commands
   "status": "executed|failed",
   "execution_time": 0.0025,
   "error": null
+}
+```
+
+#### Translate
+```http
+POST /api/v1/translate
+```
+
+**Request:**
+```json
+{
+  "text": "Hello, world",
+  "to_language": "fr"
+}
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "translated_text": "Bonjour le monde"
 }
 ```
 
