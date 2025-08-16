@@ -84,3 +84,23 @@ class GestureCommand:
             # Consider moving logger here or passing it
             print(f"Failed to parse GestureCommand: {e}")
             return None
+
+
+@dataclass
+class TranslateCommand:
+    """Command to translate a text."""
+    text: str
+    to_language: str = 'en'
+
+    @classmethod
+    def from_json(cls, data: Dict) -> Optional['TranslateCommand']:
+        try:
+            payload = data['payload']
+            return cls(
+                text=payload['text'],
+                to_language=payload.get('to_language', 'en')
+            )
+        except (KeyError, TypeError) as e:
+            # Consider moving logger here or passing it
+            print(f"Failed to parse TranslateCommand: {e}")
+            return None

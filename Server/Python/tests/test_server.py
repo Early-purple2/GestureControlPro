@@ -128,3 +128,29 @@ async def test_websocket_invalid_command(test_server):
         data = json.loads(response)
         assert data['error'] == "Invalid command format"
         assert data['id'] == "ws-invalid-1"
+
+async def test_websocket_translate_command(test_server):
+    """Test sending a translate command over WebSocket."""
+    server, mock_controller = test_server
+    uri = f"ws://{server.config.host}:{server.config.websocket_port}"
+
+    # Mock the return value of the translate method
+    mock_controller.translate.return_value = "Bonjour"
+
+    command = {
+        "id": "ws-test-translate-1",
+        "type": "translate_command",
+        "payload": {
+            "text": "Hello",
+            "to_language": "fr"
+        }
+    }
+
+    async with websockets.connect(uri) as websocket:
+        await websocket.send(json.dumps(command))
+        # Give server time to process
+        await asyncio.sleep(0.05)
+
+
+    mock_controller.translate.assert_awaited_once_with("Hello", "fr")
+    mock_controller.type_string.assert_awaited_once_with("Bonjour")

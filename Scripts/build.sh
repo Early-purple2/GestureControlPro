@@ -19,17 +19,8 @@ else
     echo "Xcode project not found. Skipping Swift build."
 fi
 
-# 2. Install Node.js Server Dependencies
-echo "\n[2/3] Installing Node.js server dependencies..."
-if [ -f "Server/Node.js/package.json" ]; then
-    (cd Server/Node.js && npm install)
-    echo "Node.js dependencies installed successfully."
-else
-    echo "package.json not found. Skipping Node.js dependencies."
-fi
-
-# 3. Install Python Server Dependencies
-echo "\n[3/3] Installing Python server dependencies..."
+# 2. Install Python Server Dependencies
+echo "\n[2/2] Installing Python server dependencies..."
 if [ -f "Server/Python/requirements.txt" ]; then
     pip install -r Server/Python/requirements.txt
     echo "Python dependencies installed successfully."
